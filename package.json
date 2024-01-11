@@ -1,7 +1,10 @@
 {
   "name": "effect-workshop",
-  "module": "index.ts",
-  "type": "module",
+  "workspaces": [
+    "website",
+    "cli",
+    "webserver"
+  ],
   "devDependencies": {
     "@types/bun": "latest"
   },
