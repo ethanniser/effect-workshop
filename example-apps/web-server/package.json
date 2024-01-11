@@ -9,6 +9,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "effect": "latest"
+    "effect": "latest",
+    "@effect/platform": "latest",
+    "@effect/platform-bun": "latest"
   }
 }
