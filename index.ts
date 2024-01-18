@@ -2,7 +2,6 @@ import { Config, Console, Effect, Layer, pipe } from "effect";
 import * as Schema from "@effect/schema/Schema";
 import { BunContext, KeyValueStore, Runtime } from "@effect/platform-bun";
 import { Command, Args, Options } from "@effect/cli";
-import { never } from "effect/Fiber";
 
 const BendConfig = Config.all({
   timeout: Config.integer("BEND_TIMEOUT"),
