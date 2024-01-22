@@ -1,11 +1,19 @@
-import { Config, Console, Effect, Layer, pipe } from "effect";
+import {
+  Config,
+  ConfigProvider,
+  Console,
+  Effect,
+  Layer,
+  Option,
+  pipe,
+} from "effect";
 import * as Schema from "@effect/schema/Schema";
-import { BunContext, KeyValueStore, Runtime } from "@effect/platform-bun";
-import { Command, Args, Options } from "@effect/cli";
+import { BunContext, Runtime } from "@effect/platform-bun";
+import { Command, Options } from "@effect/cli";
 
 const BendConfig = Config.all({
-  timeout: Config.integer("BEND_TIMEOUT"),
-  baseUrl: Config.string("BEND_BASE_URL"),
+  timeout: Config.integer("TIMEOUT"),
+  baseUrl: Config.string("BASE_URL"),
 }).pipe(
   Config.withDefault({
     timeout: 5000,
@@ -22,25 +30,27 @@ const methodOption = Options.text("method").pipe(
   Options.withDescription("the http method to use")
 );
 
-const headersOption = Options.text("headers").pipe(
+const headersOption = Options.text("header").pipe(
   Options.withAlias("H"),
-  Options.withDefault(""),
+  Options.repeated,
+  Options.optional,
   Options.withDescription("the http headers to use")
 );
 
-const outputOption = Options.file("output").pipe(
+const outputOption = Options.text("output").pipe(
   Options.withAlias("o"),
-  Options.withDefault(""),
+  Options.optional,
   Options.withDescription("the output file")
 );
 
 const run = Command.make(
   "bend",
-  { methodOption, headersOption },
-  ({ methodOption: method, headersOption: headers }) =>
+  { methodOption, headersOption, outputOption },
+  ({ methodOption, headersOption, outputOption }) =>
     Console.log({
-      method,
-      headers,
+      methodOption,
+      headersOption,
+      outputOption,
     })
 ).pipe(
   Command.withDescription("an effect http client"),
@@ -50,10 +60,13 @@ const run = Command.make(
   })
 );
 
-const main = Effect.suspend(() => run(globalThis.process.argv.slice(2)));
+const main = Effect.suspend(() => run(globalThis.process.argv));
 
 main.pipe(
   Effect.provide(BunContext.layer),
+  Effect.withConfigProvider(
+    ConfigProvider.nested(ConfigProvider.fromEnv(), "BEND")
+  ),
   Effect.tapErrorCause(Effect.logError),
   Runtime.runMain
 );

@@ -1,4 +1,4 @@
-import { Context, Data, Duration, Effect } from "effect";
+import { Context, Data, Duration, Effect, HashMap } from "effect";
 
 type FetchError = Data.TaggedEnum<{
   UnknownError: {
@@ -14,7 +14,7 @@ const { UnknownError, TimeoutError, TextDecodeError } =
 class FetchResponse extends Data.TaggedClass("FetchResponse")<{
   readonly status: number;
   readonly statusText: string;
-  readonly headers: Map<string, string>;
+  readonly headers: HashMap.HashMap<string, string>;
   readonly body: string;
 }> {}
 
@@ -22,7 +22,7 @@ interface FetchOptions {
   readonly timeout: Duration.Duration;
   readonly method: "GET" | "POST" | "PUT" | "DELETE";
   readonly body: string;
-  readonly headers: Map<string, string>;
+  readonly headers: HashMap.HashMap<string, string>;
 }
 
 interface HttpClient {
@@ -69,7 +69,7 @@ const HttpClientLive = HttpClient.of({
       return new FetchResponse({
         status: response.status,
         statusText: response.statusText,
-        headers: new Map(Object.entries(response.headers)),
+        headers: HashMap.fromIterable(response.headers.entries()),
         body: text,
       });
     });

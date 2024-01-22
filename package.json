@@ -9,9 +9,10 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "effect": "2.1.2",
     "@effect/cli": "0.30.3",
     "@effect/platform": "0.42.6",
-    "@effect/platform-bun": "0.29.7"
+    "@effect/platform-bun": "0.29.7",
+    "@effect/schema": "0.60.6",
+    "effect": "2.1.2"
   }
 }
