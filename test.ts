@@ -2,11 +2,15 @@ import { Console, Effect } from "effect";
 import { BunContext, Runtime } from "@effect/platform-bun";
 import { Command, Options } from "@effect/cli";
 
-const optionOne = Options.text("one");
+const outputOption = Options.text("output").pipe(
+  Options.withAlias("o"),
+  Options.optional,
+  Options.withDescription("the output file")
+);
 
-const run = Command.make("test", { optionOne }, ({ optionOne }) =>
+const run = Command.make("test", { outputOption }, ({ outputOption }) =>
   Console.log({
-    optionOne,
+    outputOption,
   })
 ).pipe(
   Command.run({

@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import {
   Config,
   ConfigProvider,
@@ -30,7 +32,7 @@ const headersOption = Options.text("header").pipe(
   Options.withDescription("the http headers to use")
 );
 
-const outputOption = Options.file("output").pipe(
+const outputOption = Options.text("output").pipe(
   Options.withAlias("o"),
   Options.optional,
   Options.withDescription("the output file")
