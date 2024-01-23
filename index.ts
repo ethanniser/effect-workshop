@@ -11,22 +11,15 @@ import * as Schema from "@effect/schema/Schema";
 import { BunContext, Runtime } from "@effect/platform-bun";
 import { Command, Options } from "@effect/cli";
 
-const BendConfig = Config.all({
-  timeout: Config.integer("TIMEOUT"),
-  baseUrl: Config.string("BASE_URL"),
-}).pipe(
-  Config.withDefault({
-    timeout: 5000,
-    baseUrl: "",
-  })
-);
+// const BendConfig = Config.all({
+//   timeout: Config.integer("TIMEOUT"),
+//   baseUrl: Config.string("BASE_URL").pipe(Config.option),
+// });
 
 const methodOption = Options.text("method").pipe(
   Options.withAlias("X"),
   Options.withDefault("GET"),
-  Options.withSchema(
-    Schema.literal("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
-  ),
+  Options.withSchema(Schema.literal("GET", "POST", "PUT", "PATCH", "DELETE")),
   Options.withDescription("the http method to use")
 );
 
@@ -37,7 +30,7 @@ const headersOption = Options.text("header").pipe(
   Options.withDescription("the http headers to use")
 );
 
-const outputOption = Options.text("output").pipe(
+const outputOption = Options.file("output").pipe(
   Options.withAlias("o"),
   Options.optional,
   Options.withDescription("the output file")

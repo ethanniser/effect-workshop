@@ -1,15 +1,13 @@
-import { Context, Data, Duration, Effect, HashMap } from "effect";
+import { Context, Data, Effect, HashMap, Layer } from "effect";
 
 type FetchError = Data.TaggedEnum<{
   UnknownError: {
     error: unknown;
   };
-  TimeoutError: {};
   TextDecodeError: {};
 }>;
 
-const { UnknownError, TimeoutError, TextDecodeError } =
-  Data.taggedEnum<FetchError>();
+const { UnknownError, TextDecodeError } = Data.taggedEnum<FetchError>();
 
 class FetchResponse extends Data.TaggedClass("FetchResponse")<{
   readonly status: number;
@@ -19,7 +17,6 @@ class FetchResponse extends Data.TaggedClass("FetchResponse")<{
 }> {}
 
 interface FetchOptions {
-  readonly timeout: Duration.Duration;
   readonly method: "GET" | "POST" | "PUT" | "DELETE";
   readonly body: string;
   readonly headers: HashMap.HashMap<string, string>;
@@ -33,9 +30,9 @@ interface HttpClient {
   ) => Effect.Effect<never, FetchError, FetchResponse>;
 }
 
-const HttpClient = Context.Tag<HttpClient>("HttpClient");
+export const HttpClient = Context.Tag<HttpClient>("HttpClient");
 
-const HttpClientLive = HttpClient.of({
+export const HttpClientLive = Layer.succeed(HttpClient, {
   _tag: "HttpClient",
   fetch(url, options) {
     return Effect.gen(function* (_) {
@@ -46,16 +43,9 @@ const HttpClientLive = HttpClient.of({
               signal,
               method: options?.method,
               body: options?.body,
-              headers: Object.fromEntries(options?.headers ?? []),
+              headers: options?.headers && HashMap.toEntries(options.headers),
             }),
           catch: (error) => UnknownError({ error }),
-        }),
-        Effect.timeout(options?.timeout ?? Duration.infinity),
-        Effect.mapError((error) => {
-          if (error._tag === "NoSuchElementException") {
-            return TimeoutError();
-          }
-          return error;
         })
       );
 
