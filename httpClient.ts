@@ -13,13 +13,13 @@ class FetchResponse extends Data.TaggedClass("FetchResponse")<{
   readonly status: number;
   readonly statusText: string;
   readonly headers: HashMap.HashMap<string, string>;
-  readonly body: string;
+  readonly body?: string;
 }> {}
 
 interface FetchOptions {
   readonly method: "GET" | "POST" | "PUT" | "DELETE";
-  readonly body: string;
-  readonly headers: HashMap.HashMap<string, string>;
+  readonly body?: string;
+  readonly headers?: HashMap.HashMap<string, string>;
 }
 
 interface HttpClient {

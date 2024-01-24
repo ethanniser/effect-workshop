@@ -2,7 +2,7 @@ import { Console, Effect } from "effect";
 import { BunContext, Runtime } from "@effect/platform-bun";
 import { Command, Options } from "@effect/cli";
 
-const outputOption = Options.text("output").pipe(
+const outputOption = Options.file("output").pipe(
   Options.withAlias("o"),
   Options.optional,
   Options.withDescription("the output file")
