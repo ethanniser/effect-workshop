@@ -5,6 +5,8 @@ import {
   ConfigError,
   ConfigProvider,
   Console,
+  Data,
+  Duration,
   Effect,
   Either,
   HashMap,
@@ -21,14 +23,14 @@ const BendConfig = Config.all({
   baseUrl: Config.string("BASE_URL").pipe(Config.option),
 });
 
-// const timeoutOption = Options.integer("timeout").pipe(
-//   Options.withAlias("t"),
-//   Options.withFallbackConfig(
-//     Config.integer("TIMEOUT").pipe(Config.withDefault(2000))
-//   ),
-//   Options.withSchema(Schema.DurationFromMillis),
-//   Options.withDescription("the timeout in milliseconds")
-// );
+const timeoutOption = Options.integer("timeout").pipe(
+  Options.withAlias("t"),
+  Options.withFallbackConfig(
+    Config.integer("TIMEOUT").pipe(Config.withDefault(2000))
+  ),
+  Options.withSchema(Schema.DurationFromMillis),
+  Options.withDescription("the timeout in milliseconds")
+);
 
 const dataOption = Options.text("data").pipe(
   Options.withAlias("d"),
@@ -45,7 +47,6 @@ const methodOption = Options.text("method").pipe(
 
 const headersOption = Options.text("header").pipe(
   Options.withAlias("H"),
-  Options.repeated,
   Options.optional,
   Options.withDescription("the http headers to use")
 );
@@ -69,10 +70,28 @@ function parseToHashMap(
   }, HashMap.empty<string, string>());
 }
 
+class TimeoutError extends Data.TaggedClass("TimeoutError")<{
+  readonly timeout: Duration.Duration;
+}> {}
+
 const run = Command.make(
   "bend",
-  { urlArgument, methodOption, headersOption, outputOption, dataOption },
-  ({ urlArgument, methodOption, headersOption, outputOption, dataOption }) =>
+  {
+    urlArgument,
+    methodOption,
+    headersOption,
+    outputOption,
+    dataOption,
+    timeoutOption,
+  },
+  ({
+    urlArgument,
+    methodOption,
+    headersOption,
+    outputOption,
+    dataOption,
+    timeoutOption,
+  }) =>
     Effect.gen(function* (_) {
       const config = yield* _(BendConfig);
       const httpClient = yield* _(HttpClient);
@@ -83,13 +102,22 @@ const run = Command.make(
       const body = Option.getOrUndefined(dataOption);
       const headers = Option.match(headersOption, {
         onNone: () => undefined,
-        onSome: (headers) => parseToHashMap(headers),
+        onSome: (headers) => parseToHashMap([headers]),
       });
       const result = yield* _(
         httpClient.fetch(url, {
           method: methodOption,
           body,
           headers,
+        }),
+        Effect.timeout(timeoutOption),
+        Effect.mapError((error) => {
+          switch (error._tag) {
+            case "NoSuchElementException":
+              return new TimeoutError({ timeout: timeoutOption });
+            default:
+              return error;
+          }
         })
       );
 
@@ -105,10 +133,24 @@ const run = Command.make(
         Option.match(outputOption, {
           onNone: () => Console.log("BODY: ", result.body),
           onSome: (output) =>
-            result.body ? fs.writeFileString(output, result.body) : Effect.unit,
+            result.body
+              ? fs
+                  .writeFileString(output, result.body)
+                  .pipe(
+                    Effect.zipRight(
+                      Console.log(`BODY SUCCESSFULLY WRITTEN TO: ${output}`)
+                    )
+                  )
+              : Effect.unit,
         })
       );
-    })
+    }).pipe(
+      Effect.catchTags({
+        TimeoutError: (error) =>
+          Console.error(`Timeout after ${Duration.toMillis(error.timeout)}ms`),
+        TextDecodeError: () => Console.error("Text decode error"),
+      })
+    )
 ).pipe(
   Command.withDescription("an effect http client"),
   Command.run({
