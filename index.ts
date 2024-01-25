@@ -249,3 +249,5 @@ main.pipe(
   Effect.tapErrorCause(Effect.logError),
   Runtime.runMain
 );
+
+// bun run index.ts -X POST -H "name: Ethan" --data "{ \"age\": 18 }" --repeat-every "100 millis" --backoff --backoff-factor 2.0 --backoff-max "2 seconds" http://localhost:3000/foo
