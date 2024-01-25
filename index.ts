@@ -18,6 +18,7 @@ import * as Schema from "@effect/schema/Schema";
 import { BunContext, Runtime, FileSystem } from "@effect/platform-bun";
 import { Args, Command, Options } from "@effect/cli";
 import { HttpClient, HttpClientLive } from "./httpClient";
+import { HashMapFromStrings } from "./schema";
 
 const BendConfig = Config.all({
   baseUrl: Config.string("BASE_URL").pipe(Config.option),
@@ -47,6 +48,8 @@ const methodOption = Options.text("method").pipe(
 
 const headersOption = Options.text("header").pipe(
   Options.withAlias("H"),
+  Options.repeated,
+  Options.withSchema(HashMapFromStrings),
   Options.optional,
   Options.withDescription("the http headers to use")
 );
@@ -60,15 +63,6 @@ const outputOption = Options.text("output").pipe(
 const urlArgument = Args.text({ name: "url" }).pipe(
   Args.withDescription("the url to fetch")
 );
-
-function parseToHashMap(
-  input: readonly string[]
-): HashMap.HashMap<string, string> {
-  return input.reduce((acc, header) => {
-    const [key, value] = header.split(":");
-    return HashMap.set(acc, key, value);
-  }, HashMap.empty<string, string>());
-}
 
 class TimeoutError extends Data.TaggedClass("TimeoutError")<{
   readonly timeout: Duration.Duration;
@@ -100,16 +94,15 @@ const run = Command.make(
         onSome: (baseUrl) => baseUrl + urlArgument,
       });
       const body = Option.getOrUndefined(dataOption);
-      const headers = Option.match(headersOption, {
-        onNone: () => undefined,
-        onSome: (headers) => parseToHashMap([headers]),
-      });
+      const headers = Option.getOrUndefined(headersOption);
+
       const result = yield* _(
         httpClient.fetch(url, {
-          method: methodOption,
-          body,
-          headers,
+          ...(methodOption && { method: methodOption }),
+          ...(body && { body }),
+          ...(headers && { headers }),
         }),
+
         Effect.timeout(timeoutOption),
         Effect.mapError((error) => {
           switch (error._tag) {

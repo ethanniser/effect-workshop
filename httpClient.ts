@@ -41,10 +41,13 @@ export const HttpClientLive = Layer.succeed(HttpClient, {
           try: (signal) =>
             fetch(url, {
               signal,
-              method: options?.method,
-              body: options?.body,
-              headers: options?.headers && HashMap.toEntries(options.headers),
+              ...(options?.method && { method: options.method }),
+              ...(options?.body && { body: options.body }),
+              ...(options?.headers && {
+                headers: HashMap.toEntries(options.headers),
+              }),
             }),
+
           catch: (error) => UnknownError({ error }),
         })
       );
