@@ -48,7 +48,7 @@ const methodOption = Options.text("method").pipe(
 
 const headersOption = Options.text("header").pipe(
   Options.withAlias("H"),
-  Options.repeated,
+  Options.map((_) => [_] as readonly string[]),
   Options.withSchema(HashMapFromStrings),
   Options.optional,
   Options.withDescription("the http headers to use")
@@ -59,6 +59,14 @@ const outputOption = Options.text("output").pipe(
   Options.optional,
   Options.withDescription("the output file")
 );
+
+/*
+--repeat-every: Repeat the request every specified number of seconds/minutes.
+--max-repeats: The maximum number of times to repeat the request.
+--backoff: Use an exponential backoff strategy for repeat intervals.
+--backoff-factor: The factor to use for exponential backoff.
+--backoff-max: The maximum number of seconds to wait between requests.
+*/
 
 const urlArgument = Args.text({ name: "url" }).pipe(
   Args.withDescription("the url to fetch")
