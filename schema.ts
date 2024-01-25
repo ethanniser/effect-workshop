@@ -1,4 +1,6 @@
+import { ParseResult } from "@effect/schema";
 import * as S from "@effect/schema/Schema";
+import { Duration } from "effect";
 
 const StringPairsFromStrings = S.array(S.string).pipe(
   S.filter((arr) => arr.every((s) => s.split(": ").length === 2)),
@@ -13,6 +15,18 @@ const StringPairsFromStrings = S.array(S.string).pipe(
 export const HashMapFromStrings = S.compose(
   StringPairsFromStrings,
   S.hashMap(S.string, S.string)
+);
+
+export const DurationFromString = S.transformOrFail(
+  S.string,
+  S.DurationFromSelf,
+  (value, _, ast) =>
+    ParseResult.try({
+      try: () => Duration.decode(value as Duration.DurationInput),
+      catch: (error) =>
+        ParseResult.type(ast, value, "String is not valid DurationInput"),
+    }),
+  (duration) => ParseResult.succeed(`${Duration.toMillis(duration)} millis`)
 );
 
 // const testInput = [

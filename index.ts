@@ -12,13 +12,15 @@ import {
   HashMap,
   Layer,
   Option,
+  Schedule,
   pipe,
 } from "effect";
 import * as Schema from "@effect/schema/Schema";
 import { BunContext, Runtime, FileSystem } from "@effect/platform-bun";
 import { Args, Command, Options } from "@effect/cli";
 import { HttpClient, HttpClientLive } from "./httpClient";
-import { HashMapFromStrings } from "./schema";
+import { DurationFromString, HashMapFromStrings } from "./schema";
+import * as ParseResult from "@effect/schema/ParseResult";
 
 const BendConfig = Config.all({
   baseUrl: Config.string("BASE_URL").pipe(Config.option),
@@ -68,6 +70,40 @@ const outputOption = Options.text("output").pipe(
 --backoff-max: The maximum number of seconds to wait between requests.
 */
 
+const repeatEveryOption = Options.text("repeat-every").pipe(
+  Options.withSchema(DurationFromString),
+  // Options.optional,
+  Options.withDescription(
+    'repeat the request on the specific duration (e.g. "200 millis", "1 seconds", "2 minutes")'
+  ),
+  Options.optional
+);
+
+const maxRepeatsOption = Options.integer("max-repeats").pipe(
+  Options.withDescription("the maximum number of times to repeat the request"),
+  Options.optional
+);
+
+const backoffOption = Options.boolean("backoff").pipe(
+  Options.withDescription(
+    "use an exponential backoff strategy for repeat intervals"
+  ),
+  Options.optional
+);
+
+const backoffFactorOption = Options.float("backoff-factor").pipe(
+  Options.withDescription("the factor to use for exponential backoff"),
+  Options.optional
+);
+
+const backoffMaxOption = Options.text("backoff-max").pipe(
+  Options.withSchema(DurationFromString),
+  Options.withDescription(
+    "the maximum number of time to wait between requests, uses the same unit as --repeat-every"
+  ),
+  Options.optional
+);
+
 const urlArgument = Args.text({ name: "url" }).pipe(
   Args.withDescription("the url to fetch")
 );
@@ -80,19 +116,27 @@ const run = Command.make(
   "bend",
   {
     urlArgument,
-    methodOption,
-    headersOption,
-    outputOption,
-    dataOption,
-    timeoutOption,
+    http: [methodOption, headersOption, outputOption, dataOption],
+    timing: [
+      timeoutOption,
+      repeatEveryOption,
+      maxRepeatsOption,
+      backoffOption,
+      backoffFactorOption,
+      backoffMaxOption,
+    ],
   },
   ({
     urlArgument,
-    methodOption,
-    headersOption,
-    outputOption,
-    dataOption,
-    timeoutOption,
+    http: [methodOption, headersOption, outputOption, dataOption],
+    timing: [
+      timeoutOption,
+      repeatEveryOption,
+      maxRepeatsOption,
+      backoffOption,
+      backoffFactorOption,
+      backoffMaxOption,
+    ],
   }) =>
     Effect.gen(function* (_) {
       const config = yield* _(BendConfig);
@@ -104,46 +148,80 @@ const run = Command.make(
       const body = Option.getOrUndefined(dataOption);
       const headers = Option.getOrUndefined(headersOption);
 
-      const result = yield* _(
-        httpClient.fetch(url, {
-          ...(methodOption && { method: methodOption }),
-          ...(body && { body }),
-          ...(headers && { headers }),
-        }),
-
-        Effect.timeout(timeoutOption),
-        Effect.mapError((error) => {
-          switch (error._tag) {
-            case "NoSuchElementException":
-              return new TimeoutError({ timeout: timeoutOption });
-            default:
-              return error;
-          }
-        })
+      const schedule = Option.map(repeatEveryOption, (repeatEvery) =>
+        Option.match(backoffOption, {
+          onSome: () =>
+            Schedule.exponential(
+              repeatEvery,
+              Option.getOrUndefined(backoffFactorOption)
+            ),
+          onNone: () => Schedule.spaced(repeatEvery).pipe(Schedule.delays),
+        }).pipe(
+          Schedule.whileOutput((_) =>
+            Option.match(backoffMaxOption, {
+              onNone: () => true,
+              onSome: (backoffMax) => Duration.lessThan(_, backoffMax),
+            })
+          ),
+          Schedule.repetitions,
+          Schedule.whileOutput((repetitions) =>
+            Option.match(maxRepeatsOption, {
+              onNone: () => true,
+              onSome: (maxRepeats) => repetitions < maxRepeats,
+            })
+          )
+        )
       );
 
-      yield* _(Console.log("STATUS: ", result.status, result.statusText));
-
-      for (const [key, value] of HashMap.toEntries(result.headers)) {
-        yield* _(Console.log("HEADER: ", key, value));
-      }
-
-      const fs = yield* _(FileSystem.FileSystem);
-
       yield* _(
-        Option.match(outputOption, {
-          onNone: () => Console.log("BODY: ", result.body),
-          onSome: (output) =>
-            result.body
-              ? fs
-                  .writeFileString(output, result.body)
-                  .pipe(
-                    Effect.zipRight(
-                      Console.log(`BODY SUCCESSFULLY WRITTEN TO: ${output}`)
-                    )
-                  )
-              : Effect.unit,
-        })
+        Effect.gen(function* (_) {
+          const result = yield* _(
+            httpClient.fetch(url, {
+              ...(methodOption && { method: methodOption }),
+              ...(body && { body }),
+              ...(headers && { headers }),
+            }),
+
+            Effect.timeout(timeoutOption),
+            Effect.mapError((error) => {
+              switch (error._tag) {
+                case "NoSuchElementException":
+                  return new TimeoutError({ timeout: timeoutOption });
+                default:
+                  return error;
+              }
+            })
+          );
+
+          yield* _(Console.log("STATUS: ", result.status, result.statusText));
+
+          for (const [key, value] of HashMap.toEntries(result.headers)) {
+            yield* _(Console.log("HEADER: ", key, value));
+          }
+
+          const fs = yield* _(FileSystem.FileSystem);
+
+          yield* _(
+            Option.match(outputOption, {
+              onNone: () => Console.log("BODY: ", result.body),
+              onSome: (output) =>
+                result.body
+                  ? fs
+                      .writeFileString(output, result.body)
+                      .pipe(
+                        Effect.zipRight(
+                          Console.log(`BODY SUCCESSFULLY WRITTEN TO: ${output}`)
+                        )
+                      )
+                  : Effect.unit,
+            })
+          );
+        }),
+        Effect.repeat(
+          Option.getOrElse(schedule, () =>
+            Schedule.stop.pipe(Schedule.repetitions)
+          )
+        )
       );
     }).pipe(
       Effect.catchTags({
