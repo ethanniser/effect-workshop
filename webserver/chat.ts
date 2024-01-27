@@ -1,4 +1,4 @@
-import { Console, Context, Data, Effect, Layer, ReadonlyArray } from "effect";
+import { Console, Context, Data, Effect, Layer, Stream } from "effect";
 
 type ChatMessage = {
   name: string;
@@ -15,23 +15,15 @@ type Chat = {
 
 type ChatImpl = {
   send: (
-    name: string,
-    message: string
+    stream: Stream.Stream<never, never, ChatMessage>
   ) => Effect.Effect<never, ChatSendError, void>;
   recieve: (
     name: string,
     lastRecievedTimestamp: Date
-  ) => Effect.Effect<never, ChatRecieveError, readonly ChatMessage[]>;
+  ) => Stream.Stream<never, ChatRecieveError, ChatMessage>;
 };
 
 const Chat = Context.Tag<Chat, ChatImpl>("Chat");
-export const { recieve, send } = Effect.serviceFunctions(Chat);
+// export const { recieve, send } = Effect.serviceFunctions(Chat);
 
-export const ChatLive = Layer.succeed(
-  Chat,
-  Chat.of({
-    send: (name, message) =>
-      Console.log(`Sending message from ${name}: ${message}`),
-    recieve: (name, lastRecievedTimestamp) => Effect.succeed([]),
-  })
-);
+export const ChatLive = Layer.succeed(Chat, Chat.of({} as ChatImpl));
