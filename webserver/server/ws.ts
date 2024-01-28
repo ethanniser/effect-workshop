@@ -16,20 +16,21 @@ import {
   Console,
   Schedule,
   Deferred,
+  Queue,
 } from "effect";
 import WebSocket from "ws";
+import { type ConnectionStore, type MessagePubSub } from "./model";
 import {
   BadStartupMessageError,
-  type ConnectionStore,
-  IncomingMessage,
+  ServerIncomingMessage,
   StartupMessage,
   UnknownIncomingMessageError,
   WebSocketError,
-  type WebSocketConnection,
-  type MessagePubSub,
-  OutgoingMessage,
+  type ServerWebSocketConnection,
+  ServerOutgoingMessage,
   StartupMessageFromJSON,
-  IncomingMessageFromJSON,
+  ServerIncomingMessageFromJSON,
+  ServerOutgoingMessageFromJSON,
 } from "./model";
 import * as S from "@effect/schema/Schema";
 import { formatError } from "@effect/schema/TreeFormatter";
@@ -37,12 +38,12 @@ import { formatError } from "@effect/schema/TreeFormatter";
 const ConnectionStore = Context.Tag<ConnectionStore>();
 export const ConnectionStoreLive = Layer.effect(
   ConnectionStore,
-  Ref.make(HashMap.empty<string, WebSocketConnection>())
+  Ref.make(HashMap.empty<string, ServerWebSocketConnection>())
 );
 const MessagePubSub = Context.Tag<MessagePubSub>();
 export const MessagePubSubLive = Layer.effect(
   MessagePubSub,
-  PubSub.unbounded<OutgoingMessage>()
+  PubSub.unbounded<ServerOutgoingMessage>()
 );
 
 function registerConnection(ws: WebSocket) {
@@ -72,13 +73,13 @@ function registerConnection(ws: WebSocket) {
     const messagesStream = Stream.async<
       never,
       UnknownIncomingMessageError | WebSocketError,
-      IncomingMessage
+      ServerIncomingMessage
     >((emit) => {
       ws.on("message", (message) => {
         const messageString = message.toString();
         pipe(
           messageString,
-          S.decodeUnknownEither(IncomingMessageFromJSON),
+          S.decodeUnknownEither(ServerIncomingMessageFromJSON),
           Either.mapLeft(
             (parseError) =>
               new UnknownIncomingMessageError({
@@ -111,12 +112,14 @@ function registerConnection(ws: WebSocket) {
       Stream.map((either) => either.right)
     );
 
-    const fiber = yield* _(
+    const sendQueue = yield* _(Queue.unbounded<ServerOutgoingMessage>());
+
+    const { sendFiber, receiveFiber } = yield* _(
       Effect.gen(function* (_) {
         const messagePubSub = yield* _(MessagePubSub);
 
         // this fiber finishes when the connection is closed and the stream ends
-        const sendFiber = yield* _(
+        const receiveFiber = yield* _(
           messagesStream,
           Stream.tap((message) =>
             PubSub.publish(messagePubSub, {
@@ -137,17 +140,35 @@ function registerConnection(ws: WebSocket) {
         );
 
         // this fiber finishes when the connection is closed and the stream ends
-        const receiveFiber = yield* _(
+        const sendFiber = yield* _(
           Stream.fromPubSub(messagePubSub),
           Stream.tap((message) =>
             Effect.logDebug(`TO: ${setupInfo.name}: ${JSON.stringify(message)}`)
           ),
           Stream.tap((message) =>
-            Effect.sync(() => {
-              ws.send(JSON.stringify(message));
-            })
+            pipe(
+              S.encode(ServerOutgoingMessageFromJSON)(message),
+              Effect.flatMap((messageString) =>
+                Effect.sync(() => ws.send(messageString))
+              )
+            )
           ),
+          Stream.catchAll((error) => Effect.logError(error)),
           Stream.runDrain,
+          Effect.zipLeft(
+            pipe(
+              Queue.take(sendQueue),
+              Effect.flatMap((message) =>
+                S.encode(ServerOutgoingMessageFromJSON)(message)
+              ),
+              Effect.flatMap((messageString) =>
+                Effect.sync(() => ws.send(messageString))
+              ),
+              Effect.catchAll((error) => Effect.logError(error)),
+              Effect.forever
+            ),
+            { concurrent: true }
+          ),
           Effect.fork
         );
 
@@ -161,15 +182,18 @@ function registerConnection(ws: WebSocket) {
           })
         );
 
-        return Fiber.zipRight(sendFiber, receiveFiber);
+        return { sendFiber, receiveFiber };
       })
     );
 
-    const connection: WebSocketConnection = {
+    const connection: ServerWebSocketConnection = {
       _rawWS: ws,
       name: setupInfo.name,
+      timeJoined: Date.now(),
       messages: messagesStream,
-      fiber,
+      send: sendQueue,
+      sendFiber,
+      receiveFiber,
     };
 
     const connectionStore = yield* _(ConnectionStore);
@@ -214,6 +238,25 @@ export const WebSocketLive = Layer.effectDiscard(
         Console.info(`BROADCASTING: ${JSON.stringify(message)}`)
       ),
       Stream.runDrain,
+      Effect.forkDaemon
+    );
+
+    // This fiber lives for the duration of the program
+    yield* _(
+      Effect.gen(function* (_) {
+        const connectionStore = yield* _(ConnectionStore);
+        const connections = yield* _(Ref.get(connectionStore));
+        yield* _(
+          Console.log(`Current Connections: ${HashMap.size(connections)}`)
+        );
+        for (const connection of HashMap.values(connections)) {
+          const message = `${connection.name} connected for ${
+            Date.now() - connection.timeJoined
+          }ms`;
+          yield* _(Console.log(message));
+        }
+      }),
+      Effect.repeat(Schedule.spaced("1 seconds")),
       Effect.forkDaemon
     );
   })

@@ -1,71 +1,35 @@
-import type { ParseError } from "@effect/schema/ParseResult";
-import * as S from "@effect/schema/Schema";
-import { Context, PubSub, HashMap, Ref, Stream, Data, Fiber } from "effect";
+import { PubSub, HashMap, Ref, Stream, Fiber } from "effect";
+import {
+  BadStartupMessageError,
+  ServerIncomingMessage,
+  StartupMessage,
+  UnknownIncomingMessageError,
+  WebSocketError,
+  ServerOutgoingMessage,
+  StartupMessageFromJSON,
+  ServerIncomingMessageFromJSON,
+  ServerOutgoingMessageFromJSON,
+  type WebSocketConnection,
+} from "../shared/model";
 
-export const StartupMessage = S.struct({
-  _tag: S.literal("startup"),
-  name: S.string,
-});
-
-export const StartupMessageFromJSON = S.parseJson(StartupMessage);
-
-export type StartupMessage = S.Schema.To<typeof StartupMessage>;
-
-export class BadStartupMessageError extends Data.TaggedError(
-  "BadStartupMessage"
-)<{
-  readonly rawMessage: string;
-  readonly parseError: ParseError;
-}> {}
-
-export const IncomingMessage = S.union(
-  S.struct({
-    _tag: S.literal("message"),
-    message: S.string,
-  })
-);
-
-export const IncomingMessageFromJSON = S.parseJson(IncomingMessage);
-
-export type IncomingMessage = S.Schema.To<typeof IncomingMessage>;
-
-export class UnknownIncomingMessageError extends Data.TaggedError(
-  "UnknownIncomingMessage"
-)<{
-  readonly rawMessage: string;
-  readonly parseError: ParseError;
-}> {}
-
-export class WebSocketError extends Data.TaggedError("WebSocketError")<{
-  readonly error: Error;
-}> {}
-
-export const OutgoingMessage = S.union(
-  S.struct({
-    _tag: S.literal("message"),
-    name: S.string,
-    message: S.string,
-    timestamp: S.number,
-  }),
-  S.struct({
-    _tag: S.literal("join"),
-    name: S.string,
-  }),
-  S.struct({
-    _tag: S.literal("leave"),
-    name: S.string,
-  })
-);
-export type OutgoingMessage = S.Schema.To<typeof OutgoingMessage>;
-
-export type WebSocketConnection = {
-  readonly _rawWS: WebSocket;
-  readonly name: string;
-  readonly messages: Stream.Stream<never, never, IncomingMessage>;
-  readonly fiber: Fiber.Fiber<never, void>;
+export {
+  BadStartupMessageError,
+  ServerIncomingMessage,
+  StartupMessage,
+  UnknownIncomingMessageError,
+  WebSocketError,
+  ServerOutgoingMessage,
+  StartupMessageFromJSON,
+  ServerIncomingMessageFromJSON,
+  ServerOutgoingMessageFromJSON,
 };
 
 export type ConnectionStore = Ref.Ref<
-  HashMap.HashMap<string, WebSocketConnection>
+  HashMap.HashMap<string, ServerWebSocketConnection>
 >;
-export type MessagePubSub = PubSub.PubSub<OutgoingMessage>;
+export type MessagePubSub = PubSub.PubSub<ServerOutgoingMessage>;
+
+export type ServerWebSocketConnection = WebSocketConnection<
+  ServerIncomingMessage,
+  ServerOutgoingMessage
+>;
