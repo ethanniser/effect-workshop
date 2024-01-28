@@ -7,7 +7,7 @@ export const StartupMessage = S.struct({
   name: S.string,
 });
 
-export const StartupMessageFromString = S.parseJson(StartupMessage);
+export const StartupMessageFromJSON = S.parseJson(StartupMessage);
 
 export type StartupMessage = S.Schema.To<typeof StartupMessage>;
 
@@ -25,7 +25,7 @@ export const IncomingMessage = S.union(
   })
 );
 
-export const IncomingMessageFromString = S.parseJson(IncomingMessage);
+export const IncomingMessageFromJSON = S.parseJson(IncomingMessage);
 
 export type IncomingMessage = S.Schema.To<typeof IncomingMessage>;
 
@@ -61,15 +61,8 @@ export type OutgoingMessage = S.Schema.To<typeof OutgoingMessage>;
 export type WebSocketConnection = {
   readonly _rawWS: WebSocket;
   readonly name: string;
-  readonly messages: Stream.Stream<
-    never,
-    WebSocketError | UnknownIncomingMessageError,
-    IncomingMessage
-  >;
-  readonly fiber: Fiber.Fiber<
-    UnknownIncomingMessageError | WebSocketError,
-    void
-  >;
+  readonly messages: Stream.Stream<never, never, IncomingMessage>;
+  readonly fiber: Fiber.Fiber<never, void>;
 };
 
 export type ConnectionStore = Ref.Ref<

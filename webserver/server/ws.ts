@@ -28,8 +28,8 @@ import {
   type WebSocketConnection,
   type MessagePubSub,
   OutgoingMessage,
-  StartupMessageFromString,
-  IncomingMessageFromString,
+  StartupMessageFromJSON,
+  IncomingMessageFromJSON,
 } from "./model";
 import * as S from "@effect/schema/Schema";
 import { formatError } from "@effect/schema/TreeFormatter";
@@ -53,7 +53,7 @@ function registerConnection(ws: WebSocket) {
           const messageString = message.toString();
           pipe(
             messageString,
-            S.decodeUnknownEither(StartupMessageFromString),
+            S.decodeUnknownEither(StartupMessageFromJSON),
             Either.mapLeft(
               (parseError) =>
                 new BadStartupMessageError({
@@ -78,7 +78,7 @@ function registerConnection(ws: WebSocket) {
         const messageString = message.toString();
         pipe(
           messageString,
-          S.decodeUnknownEither(IncomingMessageFromString),
+          S.decodeUnknownEither(IncomingMessageFromJSON),
           Either.mapLeft(
             (parseError) =>
               new UnknownIncomingMessageError({
@@ -115,6 +115,7 @@ function registerConnection(ws: WebSocket) {
       Effect.gen(function* (_) {
         const messagePubSub = yield* _(MessagePubSub);
 
+        // this fiber finishes when the connection is closed and the stream ends
         const sendFiber = yield* _(
           messagesStream,
           Stream.tap((message) =>
@@ -126,18 +127,16 @@ function registerConnection(ws: WebSocket) {
             })
           ),
           Stream.ensuring(
-            Effect.zip(
-              PubSub.publish(messagePubSub, {
-                _tag: "leave",
-                name: setupInfo.name,
-              }),
-              Effect.interrupt
-            )
+            PubSub.publish(messagePubSub, {
+              _tag: "leave",
+              name: setupInfo.name,
+            })
           ),
           Stream.runDrain,
           Effect.fork
         );
 
+        // this fiber finishes when the connection is closed and the stream ends
         const receiveFiber = yield* _(
           Stream.fromPubSub(messagePubSub),
           Stream.tap((message) =>
@@ -148,7 +147,6 @@ function registerConnection(ws: WebSocket) {
               ws.send(JSON.stringify(message));
             })
           ),
-          Stream.ensuring(Effect.interrupt),
           Stream.runDrain,
           Effect.fork
         );
@@ -200,6 +198,7 @@ export const WebSocketLive = Layer.effectDiscard(
       });
     });
 
+    // This fiber lives for the duration of the program
     yield* _(
       connectionStream,
       Stream.tap((ws) => registerConnection(ws)),
@@ -207,11 +206,12 @@ export const WebSocketLive = Layer.effectDiscard(
       Effect.forkDaemon
     );
 
+    // This fiber lives for the duration of the program
     const pubsub = yield* _(MessagePubSub);
     yield* _(
       Stream.fromPubSub(pubsub),
       Stream.tap((message) =>
-        Console.info(`PUBSUB: ${JSON.stringify(message)}`)
+        Console.info(`BROADCASTING: ${JSON.stringify(message)}`)
       ),
       Stream.runDrain,
       Effect.forkDaemon
