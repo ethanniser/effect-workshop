@@ -5,7 +5,7 @@ import { NodeServer } from "./node";
 export const HTTPServerLive = Layer.scoped(
   Http.server.Server,
   NodeServer.pipe(
-    Effect.zip(Config.number("PORT").pipe(Config.withDefault(3000))),
+    Effect.zip(Config.integer("PORT").pipe(Config.withDefault(3000))),
     Effect.flatMap(([server, port]) => Http.server.make(() => server, { port }))
   )
 );

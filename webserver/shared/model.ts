@@ -23,7 +23,6 @@ export type StartupMessage = S.Schema.To<typeof StartupMessage>;
 export class BadStartupMessageError extends Data.TaggedError(
   "BadStartupMessage"
 )<{
-  readonly rawMessage: string;
   readonly parseError: ParseError;
 }> {}
 
@@ -68,12 +67,11 @@ export const ServerOutgoingMessage = S.union(
 export const ServerOutgoingMessageFromJSON = S.parseJson(ServerOutgoingMessage);
 export type ServerOutgoingMessage = S.Schema.To<typeof ServerOutgoingMessage>;
 
-export type WebSocketConnection<Incoming, Outgoing> = {
+export interface WebSocketConnection<Incoming, Outgoing> {
   readonly _rawWS: WebSocket;
   readonly name: string;
-  readonly timeJoined: number;
+  readonly timeConnected: number;
   readonly messages: Stream.Stream<never, never, Incoming>;
   readonly send: Queue.Enqueue<Outgoing>;
   readonly sendFiber: Fiber.Fiber<never, void>;
-  readonly receiveFiber: Fiber.Fiber<never, void>;
-};
+}

@@ -29,7 +29,7 @@ export type ConnectionStore = Ref.Ref<
 >;
 export type MessagePubSub = PubSub.PubSub<ServerOutgoingMessage>;
 
-export type ServerWebSocketConnection = WebSocketConnection<
-  ServerIncomingMessage,
-  ServerOutgoingMessage
->;
+export interface ServerWebSocketConnection
+  extends WebSocketConnection<ServerIncomingMessage, ServerOutgoingMessage> {
+  readonly receiveFiber: Fiber.Fiber<never, void>;
+}

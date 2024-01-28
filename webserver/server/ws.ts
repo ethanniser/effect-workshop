@@ -51,15 +51,13 @@ function registerConnection(ws: WebSocket) {
     const setupInfo = yield* _(
       Effect.async<never, BadStartupMessageError, StartupMessage>((emit) => {
         ws.once("message", (message) => {
-          const messageString = message.toString();
           pipe(
-            messageString,
+            message.toString(),
             S.decodeUnknownEither(StartupMessageFromJSON),
             Either.mapLeft(
               (parseError) =>
                 new BadStartupMessageError({
                   parseError,
-                  rawMessage: messageString,
                 })
             ),
             emit
@@ -130,10 +128,20 @@ function registerConnection(ws: WebSocket) {
             })
           ),
           Stream.ensuring(
-            PubSub.publish(messagePubSub, {
-              _tag: "leave",
-              name: setupInfo.name,
-            })
+            Effect.zip(
+              PubSub.publish(messagePubSub, {
+                _tag: "leave",
+                name: setupInfo.name,
+              }),
+              Effect.gen(function* (_) {
+                const connectionStore = yield* _(ConnectionStore);
+                yield* _(
+                  Ref.update(connectionStore, (store) =>
+                    HashMap.remove(store, setupInfo.name)
+                  )
+                );
+              })
+            )
           ),
           Stream.runDrain,
           Effect.fork
@@ -189,7 +197,7 @@ function registerConnection(ws: WebSocket) {
     const connection: ServerWebSocketConnection = {
       _rawWS: ws,
       name: setupInfo.name,
-      timeJoined: Date.now(),
+      timeConnected: Date.now(),
       messages: messagesStream,
       send: sendQueue,
       sendFiber,
@@ -251,7 +259,7 @@ export const WebSocketLive = Layer.effectDiscard(
         );
         for (const connection of HashMap.values(connections)) {
           const message = `${connection.name} connected for ${
-            Date.now() - connection.timeJoined
+            Date.now() - connection.timeConnected
           }ms`;
           yield* _(Console.log(message));
         }

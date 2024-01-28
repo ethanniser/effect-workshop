@@ -23,7 +23,5 @@ export {
   UnknownIncomingMessageError,
 };
 
-export type ClientWebSocketConnection = WebSocketConnection<
-  ClientIncomingMessage,
-  ClientOutgoingMessage
->;
+export interface ClientWebSocketConnection
+  extends WebSocketConnection<ClientIncomingMessage, ClientOutgoingMessage> {}
