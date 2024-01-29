@@ -14,15 +14,27 @@ import { BunContext, Runtime, Terminal } from "@effect/platform-bun";
 import { Args, Command, Options, Prompt } from "@effect/cli";
 import { WebSocketConnection, WebSocketConnectionLive } from "./ws";
 
+const write = (bufferRef: Ref.Ref<readonly string[]>) =>
+  Effect.gen(function* (_) {
+    const terminal = yield* _(Terminal.Terminal);
+    const buffer = yield* _(Ref.get(bufferRef));
+    yield* _(terminal.display("\x1Bc"));
+    const prompt = "\nENTER MESSAGE >> ";
+    const messages = buffer.join("\n") + prompt;
+    yield* _(terminal.display(messages));
+  });
+
 const rootCommand = Command.make("root", {}, () =>
   Effect.gen(function* (_) {
     const name = yield* _(Prompt.text({ message: "Please enter your name" }));
-    const displayBuffer = yield* _(Ref.make<readonly string[]>([]));
+    const displayBuffer = yield* _(
+      Ref.make<readonly string[]>([`Connected to server as ${name}`])
+    );
+    yield* _(write(displayBuffer));
     yield* _(
       Effect.gen(function* (_) {
         const wsConnection = yield* _(WebSocketConnection);
         const terminal = yield* _(Terminal.Terminal);
-        yield* _(terminal.display(`Connected to server as ${name}\n`));
         const recieveFiber = yield* _(
           wsConnection.messages,
           Stream.map((message) =>
@@ -55,7 +67,8 @@ const rootCommand = Command.make("root", {}, () =>
                   }
                   return buffer.concat(message);
                 })
-              )
+              ),
+              Effect.zip(write(displayBuffer))
             )
           ),
           Stream.catchAll((error) => Effect.logError(error)),
@@ -64,7 +77,10 @@ const rootCommand = Command.make("root", {}, () =>
         );
 
         const readFiber = yield* _(
-          Effect.gen(function* (_) {}),
+          terminal.readLine,
+          Effect.flatMap((message) =>
+            Queue.offer(wsConnection.send, { _tag: "message", message })
+          ),
           Effect.forever,
           Effect.fork
         );
