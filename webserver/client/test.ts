@@ -1,29 +1,20 @@
-import { Console, Effect, Layer, Match, Stream } from "effect";
-import { BunContext, Runtime, Terminal } from "@effect/platform-bun";
-import { Args, Command, Options, Prompt } from "@effect/cli";
-import { Name, WebSocketConnection, WebSocketConnectionLive } from "./ws";
-import * as S from "@effect/schema/Schema";
+import { Command, Options, Prompt } from "@effect/cli";
+import { NodeContext, Runtime } from "@effect/platform-node";
+import { Effect } from "effect";
 
-const fooOption = Options.text("foo");
-const baseCommand = Command.make("base", { fooOption }, () => Effect.unit);
-
-const namePrompt = Prompt.text({ message: "Please enter your name" });
-const promptCommand = Command.prompt("prompt", namePrompt, (name) =>
-  Effect.gen(function* (_) {
-    const { fooOption } = yield* _(baseCommand);
-    yield* _(Console.log(name, fooOption));
-  })
-);
-
-const run = baseCommand.pipe(
-  Command.withSubcommands([promptCommand]),
-  Command.withDescription("a chat client"),
+const run = Command.make("prompter", {
+  verbose: Options.boolean("verbose").pipe(Options.withAlias("v")),
+}).pipe(
+  Command.withHandler(({ verbose }) =>
+    Effect.gen(function* (_) {
+      const name = yield* _(Prompt.run(Prompt.text({ message: "Name?" })));
+      console.log(`Hello ${name}! (verbose: ${verbose})`);
+    })
+  ),
   Command.run({
-    name: "Chat",
+    name: "prompter",
     version: "1.0.0",
   })
 );
 
-const main = Effect.suspend(() => run(globalThis.process.argv));
-
-main.pipe(Effect.provide(BunContext.layer), Runtime.runMain);
+run(process.argv).pipe(Effect.provide(NodeContext.layer), Runtime.runMain);
