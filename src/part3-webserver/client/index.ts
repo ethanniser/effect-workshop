@@ -1,12 +1,23 @@
-import { Console, Effect, Fiber, Layer, Match, Queue, Stream } from "effect";
+import {
+  Console,
+  Effect,
+  Fiber,
+  Layer,
+  Match,
+  Queue,
+  ReadonlyArray,
+  Ref,
+  Stream,
+  pipe,
+} from "effect";
 import { BunContext, Runtime, Terminal } from "@effect/platform-bun";
 import { Args, Command, Options, Prompt } from "@effect/cli";
 import { WebSocketConnection, WebSocketConnectionLive } from "./ws";
-import * as S from "@effect/schema/Schema";
 
 const rootCommand = Command.make("root", {}, () =>
   Effect.gen(function* (_) {
     const name = yield* _(Prompt.text({ message: "Please enter your name" }));
+    const displayBuffer = yield* _(Ref.make<readonly string[]>([]));
     yield* _(
       Effect.gen(function* (_) {
         const wsConnection = yield* _(WebSocketConnection);
@@ -34,22 +45,31 @@ const rootCommand = Command.make("root", {}, () =>
               Match.exhaustive
             )
           ),
-          Stream.tap((message) => terminal.display(message)),
+          Stream.tap((message) =>
+            pipe(
+              terminal.columns,
+              Effect.flatMap((columns) =>
+                Ref.getAndUpdate(displayBuffer, (buffer) => {
+                  if (buffer.length >= columns - 1) {
+                    return buffer.slice(1).concat(message);
+                  }
+                  return buffer.concat(message);
+                })
+              )
+            )
+          ),
           Stream.catchAll((error) => Effect.logError(error)),
           Stream.runDrain,
           Effect.fork
         );
 
-        const sendFiber = yield* _(
-          terminal.readLine,
-          Effect.flatMap((message) =>
-            Queue.offer(wsConnection.send, { _tag: "message", message })
-          ),
+        const readFiber = yield* _(
+          Effect.gen(function* (_) {}),
           Effect.forever,
           Effect.fork
         );
 
-        yield* _(Fiber.joinAll([recieveFiber, sendFiber]));
+        yield* _(Fiber.joinAll([recieveFiber, readFiber]));
       }),
       Effect.provide(WebSocketConnectionLive(name))
     );
