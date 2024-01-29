@@ -13,6 +13,11 @@ import {
 import { BunContext, Runtime, Terminal } from "@effect/platform-bun";
 import { Args, Command, Options, Prompt } from "@effect/cli";
 import { WebSocketConnection, WebSocketConnectionLive } from "./ws";
+import chalk from "chalk";
+import * as M from "./model";
+import { Schema } from "@effect/schema";
+
+const colorText = (text: string, color: M.Color): string => chalk[color](text);
 
 const write = (bufferRef: Ref.Ref<readonly string[]>) =>
   Effect.gen(function* (_) {
@@ -24,9 +29,17 @@ const write = (bufferRef: Ref.Ref<readonly string[]>) =>
     yield* _(terminal.display(messages));
   });
 
+// TODO: get avaialble colors from server with http client and display them in the prompt
+
 const rootCommand = Command.make("root", {}, () =>
   Effect.gen(function* (_) {
     const name = yield* _(Prompt.text({ message: "Please enter your name" }));
+    const color = yield* _(
+      Prompt.select({
+        message: "Please select a color",
+        choices: M.colors.map((color) => ({ title: color, value: color })),
+      })
+    );
     const displayBuffer = yield* _(
       Ref.make<readonly string[]>([`Connected to server as ${name}`])
     );
@@ -39,21 +52,19 @@ const rootCommand = Command.make("root", {}, () =>
           wsConnection.messages,
           Stream.map((message) =>
             Match.value(message).pipe(
-              Match.when(
-                { _tag: "join" },
-                (_) => `${_.name} has joined the chat.`
-              ),
-              Match.when(
-                { _tag: "leave" },
-                (_) => `${_.name} has left the chat.`
-              ),
-              Match.when(
-                { _tag: "message" },
-                (_) =>
-                  `${new Date(_.timestamp).toLocaleTimeString()} - ${_.name}: ${
-                    _.message
-                  }`
-              ),
+              Match.when({ _tag: "join" }, (_) => {
+                const coloredName = colorText(_.name, _.color);
+                return `${coloredName} has joined the chat.`;
+              }),
+              Match.when({ _tag: "leave" }, (_) => {
+                const coloredName = colorText(_.name, _.color);
+                return `${coloredName} has left the chat.`;
+              }),
+              Match.when({ _tag: "message" }, (_) => {
+                const time = new Date(_.timestamp).toLocaleTimeString();
+                const coloredName = colorText(_.name, _.color);
+                return `${time} - ${coloredName}: ${_.message}`;
+              }),
               Match.exhaustive
             )
           ),
@@ -87,7 +98,7 @@ const rootCommand = Command.make("root", {}, () =>
 
         yield* _(Fiber.joinAll([recieveFiber, readFiber]));
       }),
-      Effect.provide(WebSocketConnectionLive(name))
+      Effect.provide(WebSocketConnectionLive(name, color))
     );
   })
 );

@@ -13,6 +13,13 @@ import {
 } from "../shared/model";
 
 export {
+  colors,
+  Color,
+  AvailableColorsResponse,
+  AvailableColorsResponseFromJSON,
+} from "../shared/model";
+
+export {
   BadStartupMessageError,
   ServerIncomingMessage,
   StartupMessage,

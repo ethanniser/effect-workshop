@@ -5,6 +5,7 @@ import { Console, Effect, Layer, LogLevel, Logger } from "effect";
 import { HTTPServerLive, HttpLive } from "./http";
 import { WSSServer, WSSServerLive, WebSocketLive } from "./ws";
 import { NodeServerLive } from "./node";
+import { ConnectionStoreLive } from "./shared";
 
 const ServersLive = Layer.merge(HttpLive, WebSocketLive);
 
@@ -28,8 +29,9 @@ const MainLive = ServersLive.pipe(
   Layer.merge(StartMessage),
   Layer.provide(HTTPServerLive),
   Layer.provide(WSSServerLive),
-  Layer.provide(NodeContext.layer),
+  Layer.provide(ConnectionStoreLive),
   Layer.provide(NodeServerLive),
+  Layer.provide(NodeContext.layer),
   Layer.provide(Logger.minimumLogLevel(LogLevel.Debug))
 );
 

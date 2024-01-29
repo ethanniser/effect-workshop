@@ -12,53 +12,55 @@ import {
   pipe,
   Either,
   Option,
-  Fiber,
   Console,
   Schedule,
-  Deferred,
   Queue,
 } from "effect";
 import WebSocket from "ws";
-import { type ConnectionStore, type MessagePubSub } from "./model";
-import {
-  BadStartupMessageError,
-  ServerIncomingMessage,
-  StartupMessage,
-  UnknownIncomingMessageError,
-  WebSocketError,
-  type ServerWebSocketConnection,
-  ServerOutgoingMessage,
-  StartupMessageFromJSON,
-  ServerIncomingMessageFromJSON,
-  ServerOutgoingMessageFromJSON,
-} from "./model";
+import * as M from "./model";
+import { ConnectionStore, getAvailableColors } from "./shared";
 import * as S from "@effect/schema/Schema";
 import { formatError } from "@effect/schema/TreeFormatter";
 
-const ConnectionStore = Context.Tag<ConnectionStore>();
-export const ConnectionStoreLive = Layer.effect(
-  ConnectionStore,
-  Ref.make(HashMap.empty<string, ServerWebSocketConnection>())
-);
-const MessagePubSub = Context.Tag<MessagePubSub>();
+const MessagePubSub = Context.Tag<M.MessagePubSub>();
 export const MessagePubSubLive = Layer.effect(
   MessagePubSub,
-  PubSub.unbounded<ServerOutgoingMessage>()
+  PubSub.unbounded<M.ServerOutgoingMessage>()
 );
 
 function registerConnection(ws: WebSocket) {
   return Effect.gen(function* (_) {
     const setupInfo = yield* _(
-      Effect.async<never, BadStartupMessageError, StartupMessage>((emit) => {
+      Effect.async<
+        M.ConnectionStore,
+        M.BadStartupMessageError,
+        M.StartupMessage
+      >((emit) => {
         ws.once("message", (message) => {
           pipe(
             message.toString(),
-            S.decodeUnknownEither(StartupMessageFromJSON),
-            Either.mapLeft(
+            S.decodeUnknown(M.StartupMessageFromJSON),
+            Effect.mapError(
               (parseError) =>
-                new BadStartupMessageError({
-                  parseError,
+                new M.BadStartupMessageError({
+                  error: { _tag: "parseError", parseError },
                 })
+            ),
+            Effect.flatMap((message) =>
+              Effect.gen(function* (_) {
+                const availableColors = yield* _(getAvailableColors);
+                if (!availableColors.includes(message.color)) {
+                  yield* _(
+                    new M.BadStartupMessageError({
+                      error: {
+                        _tag: "colorAlreadyTaken",
+                        color: message.color,
+                      },
+                    })
+                  );
+                }
+                return message;
+              })
             ),
             emit
           );
@@ -70,30 +72,30 @@ function registerConnection(ws: WebSocket) {
 
     const messagesStream = Stream.async<
       never,
-      UnknownIncomingMessageError | WebSocketError,
-      ServerIncomingMessage
+      M.UnknownIncomingMessageError | M.WebSocketError,
+      M.ServerIncomingMessage
     >((emit) => {
       ws.on("message", (message) => {
         const messageString = message.toString();
         pipe(
           messageString,
-          S.decodeUnknownEither(ServerIncomingMessageFromJSON),
-          Either.mapLeft(
+          S.decodeUnknown(M.ServerIncomingMessageFromJSON),
+          Effect.mapError(
             (parseError) =>
-              new UnknownIncomingMessageError({
+              new M.UnknownIncomingMessageError({
                 parseError,
                 rawMessage: messageString,
               })
           ),
-          Either.mapBoth({
-            onRight: (message) => Chunk.make(message),
-            onLeft: (error) => Option.some(error),
+          Effect.mapBoth({
+            onSuccess: (message) => Chunk.make(message),
+            onFailure: (error) => Option.some(error),
           }),
           emit
         );
       });
       ws.on("error", (error) => {
-        emit(Effect.fail(Option.some(new WebSocketError({ error }))));
+        emit(Effect.fail(Option.some(new M.WebSocketError({ error }))));
       });
       ws.on("close", () => {
         emit(Effect.fail(Option.none()));
@@ -110,7 +112,7 @@ function registerConnection(ws: WebSocket) {
       Stream.map((either) => either.right)
     );
 
-    const sendQueue = yield* _(Queue.unbounded<ServerOutgoingMessage>());
+    const sendQueue = yield* _(Queue.unbounded<M.ServerOutgoingMessage>());
 
     const { sendFiber, receiveFiber } = yield* _(
       Effect.gen(function* (_) {
@@ -123,6 +125,7 @@ function registerConnection(ws: WebSocket) {
             PubSub.publish(messagePubSub, {
               _tag: "message",
               name: setupInfo.name,
+              color: setupInfo.color,
               message: message.message,
               timestamp: Date.now(),
             })
@@ -132,6 +135,7 @@ function registerConnection(ws: WebSocket) {
               PubSub.publish(messagePubSub, {
                 _tag: "leave",
                 name: setupInfo.name,
+                color: setupInfo.color,
               }),
               Effect.gen(function* (_) {
                 const connectionStore = yield* _(ConnectionStore);
@@ -155,7 +159,7 @@ function registerConnection(ws: WebSocket) {
           ),
           Stream.tap((message) =>
             pipe(
-              S.encode(ServerOutgoingMessageFromJSON)(message),
+              S.encode(M.ServerOutgoingMessageFromJSON)(message),
               Effect.flatMap((messageString) =>
                 Effect.sync(() => ws.send(messageString))
               )
@@ -167,7 +171,7 @@ function registerConnection(ws: WebSocket) {
             pipe(
               Queue.take(sendQueue),
               Effect.flatMap((message) =>
-                S.encode(ServerOutgoingMessageFromJSON)(message)
+                S.encode(M.ServerOutgoingMessageFromJSON)(message)
               ),
               Effect.flatMap((messageString) =>
                 Effect.sync(() => ws.send(messageString))
@@ -187,6 +191,7 @@ function registerConnection(ws: WebSocket) {
           PubSub.publish(messagePubSub, {
             _tag: "join",
             name: setupInfo.name,
+            color: setupInfo.color,
           })
         );
 
@@ -194,9 +199,10 @@ function registerConnection(ws: WebSocket) {
       })
     );
 
-    const connection: ServerWebSocketConnection = {
+    const connection: M.ServerWebSocketConnection = {
       _rawWS: ws,
       name: setupInfo.name,
+      color: setupInfo.color,
       timeConnected: Date.now(),
       messages: messagesStream,
       send: sendQueue,
@@ -210,9 +216,7 @@ function registerConnection(ws: WebSocket) {
         HashMap.set(store, setupInfo.name, connection)
       )
     );
-  }).pipe(
-    Effect.catchAll((error) => Console.error(formatError(error.parseError)))
-  );
+  }).pipe(Effect.catchAll((error) => Console.error(error)));
 }
 
 export const WSSServer = Context.Tag<WebSocketServer>();
@@ -268,4 +272,4 @@ export const WebSocketLive = Layer.effectDiscard(
       Effect.forkDaemon
     );
   })
-).pipe(Layer.provide(ConnectionStoreLive), Layer.provide(MessagePubSubLive));
+).pipe(Layer.provide(MessagePubSubLive));
