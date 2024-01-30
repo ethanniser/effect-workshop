@@ -115,6 +115,8 @@ export const WebSocketConnectionLive = (name: string, color: M.Color) =>
         Effect.forkDaemon
       );
 
+      const close = Effect.sync(() => ws.close());
+
       const connection: M.ClientWebSocketConnection = {
         _rawWS: ws,
         name,
@@ -123,6 +125,7 @@ export const WebSocketConnectionLive = (name: string, color: M.Color) =>
         messages: messagesStream,
         send: sendQueue,
         sendFiber,
+        close,
       };
 
       return connection;

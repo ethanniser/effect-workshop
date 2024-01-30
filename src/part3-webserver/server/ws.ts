@@ -199,6 +199,8 @@ function registerConnection(ws: WebSocket) {
       })
     );
 
+    const close = Effect.sync(() => ws.close());
+
     const connection: M.ServerWebSocketConnection = {
       _rawWS: ws,
       name: setupInfo.name,
@@ -208,6 +210,7 @@ function registerConnection(ws: WebSocket) {
       send: sendQueue,
       sendFiber,
       receiveFiber,
+      close,
     };
 
     const connectionStore = yield* _(ConnectionStore);
