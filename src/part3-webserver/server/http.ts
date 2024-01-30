@@ -4,11 +4,12 @@ import { NodeServer } from "./node";
 import { getAvailableColors } from "./shared";
 import { Schema } from "@effect/schema";
 import { AvailableColorsResponseFromJSON } from "./model";
+import * as C from "../shared/config";
 
 export const HTTPServerLive = Layer.scoped(
   Http.server.Server,
   NodeServer.pipe(
-    Effect.zip(Config.integer("PORT").pipe(Config.withDefault(3000))),
+    Effect.zip(C.PORT),
     Effect.flatMap(([server, port]) => Http.server.make(() => server, { port }))
   )
 );

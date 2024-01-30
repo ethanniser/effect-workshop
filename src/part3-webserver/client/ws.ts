@@ -13,6 +13,7 @@ import {
 import * as M from "./model";
 import WebSocket from "ws";
 import * as S from "@effect/schema/Schema";
+import * as C from "../shared/config";
 
 export const WebSocketConnection = Context.Tag<M.ClientWebSocketConnection>();
 
@@ -20,11 +21,10 @@ export const WebSocketConnectionLive = (name: string, color: M.Color) =>
   Layer.effect(
     WebSocketConnection,
     Effect.gen(function* (_) {
-      const port = yield* _(
-        Config.integer("PORT").pipe(Config.withDefault(3000))
-      );
+      const port = yield* _(C.PORT);
+      const host = yield* _(C.HOST);
       const ws = yield* _(
-        Effect.sync(() => new WebSocket(`ws://localhost:${port}`))
+        Effect.sync(() => new WebSocket(`ws://${host}:${port}`))
       );
 
       yield* _(

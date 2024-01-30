@@ -2,20 +2,19 @@ import {
   Console,
   Effect,
   Fiber,
-  Layer,
   Match,
   Queue,
-  ReadonlyArray,
   Ref,
   Stream,
   pipe,
 } from "effect";
 import { BunContext, Runtime, Terminal } from "@effect/platform-bun";
-import { Args, Command, Options, Prompt } from "@effect/cli";
+import { Command, Prompt } from "@effect/cli";
 import { WebSocketConnection, WebSocketConnectionLive } from "./ws";
 import chalk from "chalk";
 import * as M from "./model";
-import { Schema } from "@effect/schema";
+import * as C from "../shared/config";
+import * as Http from "@effect/platform-node/HttpClient";
 
 const colorText = (text: string, color: M.Color): string => chalk[color](text);
 
@@ -31,13 +30,34 @@ const write = (bufferRef: Ref.Ref<readonly string[]>) =>
 
 // TODO: get avaialble colors from server with http client and display them in the prompt
 
+const getAvailableColors = Effect.gen(function* (_) {
+  const fetch = yield* _(Http.client.Client);
+  const PORT = yield* _(C.PORT);
+  const HOST = yield* _(C.HOST);
+  const request = Http.request.get(`http://${HOST}:${PORT}/colors`);
+  const response = yield* _(fetch(request));
+  const colors = yield* _(
+    Http.response.schemaBodyJson(M.AvailableColorsResponseFromJSON)(response)
+  );
+  return colors.colors;
+});
+
 const rootCommand = Command.make("root", {}, () =>
   Effect.gen(function* (_) {
     const name = yield* _(Prompt.text({ message: "Please enter your name" }));
+    const avaialbleColors = yield* _(getAvailableColors);
+
+    if (avaialbleColors.length === 0) {
+      return yield* _(Console.error("Server is full!"));
+    }
+
     const color = yield* _(
       Prompt.select({
         message: "Please select a color",
-        choices: M.colors.map((color) => ({ title: color, value: color })),
+        choices: avaialbleColors.map((color) => ({
+          title: color,
+          value: color,
+        })),
       })
     );
     const displayBuffer = yield* _(
@@ -113,4 +133,8 @@ const run = rootCommand.pipe(
 
 const main = Effect.suspend(() => run(globalThis.process.argv));
 
-main.pipe(Effect.provide(BunContext.layer), Runtime.runMain);
+main.pipe(
+  Effect.provide(BunContext.layer),
+  Effect.provide(Http.client.layer),
+  Runtime.runMain
+);
