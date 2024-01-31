@@ -1,4 +1,4 @@
-import { Console, Effect } from "effect";
+import { Console, Effect, Exit, pipe } from "effect";
 import meow from "meow";
 import * as M from "./model";
 
@@ -53,14 +53,22 @@ if (!arg) {
   process.exit(1);
 }
 
-try {
-  Effect.runPromise(main(arg, cli.flags));
-} catch (e) {
-  console.error(e);
-  process.exit(1);
-} finally {
-  process.exit(0);
-}
+const exit = await pipe(
+  main(arg, cli.flags),
+  Effect.catchTags({
+    TextDecodeError: (error) => Console.error("Text decode error: ", error),
+    UnknownError: (error) => Console.error("Unknown error: ", error),
+  }),
+  Effect.runPromiseExit
+);
+
+Exit.match(exit, {
+  onSuccess: () => process.exit(0),
+  onFailure: (cause) => {
+    console.error(cause);
+    process.exit(1);
+  },
+});
 
 interface CLIOptions {
   method: string;
@@ -119,10 +127,5 @@ function main(url: string, options?: CLIOptions) {
     } else {
       console.log(finalString);
     }
-  }).pipe(
-    Effect.catchTags({
-      TextDecodeError: (error) => Console.error("Text decode error: ", error),
-      UnknownError: (error) => Console.error("Unknown error: ", error),
-    })
-  );
+  });
 }
