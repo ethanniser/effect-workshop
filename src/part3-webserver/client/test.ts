@@ -12,10 +12,10 @@ const Todo = S.struct({
 
 const main = Effect.gen(function* (_) {
   const fetch = yield* _(Http.client.Client);
-  const reqest = Http.request.get(
+  const request = Http.request.get(
     "https://jsonplaceholder.typicode.com/posts/1"
   );
-  const response = yield* _(fetch(reqest));
+  const response = yield* _(fetch(request));
   const todo = yield* _(Http.response.schemaBodyJson(Todo)(response));
 });
 
