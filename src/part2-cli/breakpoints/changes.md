@@ -9,10 +9,11 @@
 ### 2 -> 3 - Adding typed Errors
 
 - create `model.ts` file
-- defined `UnknownError` and `TextDecodeError` classes
+- defined `HeaderParseError`, `TextDecodeError` and `UnknownError` classes
 - move `Effect.tryPromise` calls to the `{ try: ..., catch: ...}` overload using the new error types
 - handle errors with `Effect.catchTags`
 - use `Effect.runPromiseExit` and `Exit.match` to replace try/catch/finally block
+- use `Effect.reduce` to properly yield a `HeaderParseError` in headers parsing
 
 ### 3 -> 4 - Explit typed dependencies
 
@@ -27,7 +28,7 @@
 
 ### 4 -> 5 - Parse cli args in effect
 
-- define `CliOptionsSchema` and derive `CliOptionsImpl` type from it
+-
 
 - parse cli args in effect
 

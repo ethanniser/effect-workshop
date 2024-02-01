@@ -29,12 +29,12 @@ type CLIOptions = {
 };
 
 interface CLIOptionsImpl {
-  url: string;
-  method: string;
-  data: string | undefined;
-  headers: string[] | undefined;
-  output: string | undefined;
-  include: boolean | undefined;
+  readonly url: string;
+  readonly method: string;
+  readonly data: string | undefined;
+  readonly headers: string[] | undefined;
+  readonly output: string | undefined;
+  readonly include: boolean | undefined;
 }
 
 export const CLIOptions = Context.Tag<CLIOptions, CLIOptionsImpl>("CLIOptions");

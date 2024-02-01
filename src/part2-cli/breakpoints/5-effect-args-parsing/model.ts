@@ -1,5 +1,4 @@
-import { Context, Data } from "effect";
-import * as S from "@effect/schema/Schema";
+import { Context, Data, Option } from "effect";
 
 export class UnknownError extends Data.TaggedError("UnknownError")<{
   readonly error: unknown;
@@ -19,16 +18,14 @@ type CLIOptions = {
   readonly _: unique symbol;
 };
 
-const CliOptionsSchema = S.struct({
-  url: S.string,
-  method: S.string,
-  data: S.optional(S.string),
-  headers: S.optional(S.array(S.string)),
-  output: S.optional(S.string),
-  include: S.optional(S.boolean),
-});
-
-interface CLIOptionsImpl extends S.Schema.To<typeof CliOptionsSchema> {}
+interface CLIOptionsImpl {
+  readonly url: string;
+  readonly method: string;
+  readonly data: Option.Option<string>;
+  readonly headers: Option.Option<readonly [string, string][]>;
+  readonly output: Option.Option<string>;
+  readonly include: Option.Option<boolean>;
+}
 
 export const CLIOptions = Context.Tag<CLIOptions, CLIOptionsImpl>("CLIOptions");
 

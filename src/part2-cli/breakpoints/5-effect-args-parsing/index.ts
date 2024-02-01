@@ -2,61 +2,38 @@ import { Console, Effect, Layer, Option, pipe } from "effect";
 import meow from "meow";
 import * as M from "./model";
 
-const parseCliOptions = () =>
-  meow(
-    `
-	Usage
-	  $ bend [...options] <url>
+//
 
-	Options
-	  --method, -X  The HTTP method to use
-      --header, -H  The HTTP headers to use
-      --data,   -d  The data to send
-      --output, -o  The output file
-      --include, -i Include the HTTP headers in the output
-`,
-    {
-      importMeta: import.meta,
-      flags: {
-        method: {
-          type: "string",
-          shortFlag: "X",
-          default: "GET",
-          isRequired: false,
-        },
-        headers: {
-          type: "string",
-          shortFlag: "H",
-          isMultiple: true,
-          isRequired: false,
-        },
-        data: {
-          type: "string",
-          shortFlag: "d",
-          isRequired: false,
-        },
-        output: {
-          type: "string",
-          shortFlag: "o",
-          isRequired: false,
-        },
-        include: {
-          type: "boolean",
-          shortFlag: "i",
-          isRequired: false,
-        },
-      },
-    }
-  );
+function getCliOption(
+  cliArgs: string[],
+  option: { name: string; alias?: string }
+): Option.Option<string> {
+  return Option.gen(function* (_) {
+    const index = yield* _(
+      cliArgs.findIndex(
+        (arg) => arg === `--${option.name}` || arg === `-${option.alias}`
+      ),
+      (_) => (_ === -1 ? Option.none() : Option.some(_))
+    );
+    const nextIndex = index + 1;
+    const value = yield* _(Option.fromNullable(cliArgs[nextIndex]));
+    return value;
+  });
+}
 
 const CliOptionsLive = Layer.effect(
   M.CLIOptions,
   Effect.gen(function* (_) {
-    const cli = yield* _(
-      Effect.try({
-        try: () => parseCliOptions(),
-        catch: (error) => new M.CliOptionsParseError({ error }),
-      })
+    const args = yield* _(Effect.sync(() => process.argv.slice(2)));
+
+    const method = getCliOption(args, { name: "method" }).pipe(
+      Option.getOrElse(() => "GET")
+    );
+    const data = getCliOption(args, { name: "data" });
+    const headers = getCliOption(args, { name: "headers" });
+    const output = getCliOption(args, { name: "output" });
+    const include = getCliOption(args, { name: "include" }).pipe(
+      Option.getOrElse(() => true)
     );
 
     const arg = yield* _(
