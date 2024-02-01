@@ -22,7 +22,7 @@ interface CLIOptionsImpl {
   readonly url: string;
   readonly method: string;
   readonly data: Option.Option<string>;
-  readonly headers: Option.Option<readonly [string, string][]>;
+  readonly headers: readonly (readonly [string, string])[];
   readonly output: Option.Option<string>;
   readonly include: Option.Option<boolean>;
 }

@@ -1,8 +1,16 @@
 import { Console, Effect, Layer, Option, pipe } from "effect";
-import meow from "meow";
 import * as M from "./model";
+import * as S from "@effect/schema/Schema";
 
-//
+const StringPairsFromStrings = S.array(S.string).pipe(
+  S.filter((arr) => arr.every((s) => s.split(": ").length === 2)),
+  S.transform(
+    S.array(S.tuple(S.string, S.string)),
+    (arr) =>
+      arr.map((s) => s.split(": ") as unknown as readonly [string, string]),
+    (arr) => arr.map((s) => s.join(": "))
+  )
+);
 
 function getCliOption(
   cliArgs: string[],
@@ -21,6 +29,25 @@ function getCliOption(
   });
 }
 
+function getCliOptionMultiple(
+  cliArgs: string[],
+  option: { name: string; alias?: string }
+): string[] {
+  const indexes = cliArgs.reduce((acc, arg, index) => {
+    if (arg === `--${option.name}` || arg === `-${option.alias}`) {
+      if (index > cliArgs.length - 1) {
+        return acc;
+      }
+      acc.push(index);
+    }
+    return acc;
+  }, [] as number[]);
+  return indexes.reduce((acc, index) => {
+    acc.push(cliArgs[index + 1]!);
+    return acc;
+  }, [] as string[]);
+}
+
 const CliOptionsLive = Layer.effect(
   M.CLIOptions,
   Effect.gen(function* (_) {
@@ -30,22 +57,35 @@ const CliOptionsLive = Layer.effect(
       Option.getOrElse(() => "GET")
     );
     const data = getCliOption(args, { name: "data" });
-    const headers = getCliOption(args, { name: "headers" });
-    const output = getCliOption(args, { name: "output" });
-    const include = getCliOption(args, { name: "include" }).pipe(
-      Option.getOrElse(() => true)
+
+    const headers = yield* _(
+      getCliOptionMultiple(args, { name: "headers" }),
+      S.decode(StringPairsFromStrings),
+      Effect.mapError(() => new M.HeaderParseError())
     );
 
-    const arg = yield* _(
-      Option.fromNullable(cli.input[0]),
+    const output = getCliOption(args, { name: "output" });
+    const include = getCliOption(args, { name: "include" }).pipe(
+      Option.flatMap((_) =>
+        ["true", "false"].includes(_) ? Option.some(_) : Option.none()
+      ),
+      Option.map((_) => _ === "true")
+    );
+
+    const url = yield* _(
+      Option.fromNullable(null),
       Effect.mapError(
         () => new M.CliOptionsParseError({ error: "No url provided" })
       )
     );
 
     return {
-      url: arg,
-      ...cli.flags,
+      url,
+      method,
+      data,
+      headers,
+      output,
+      include,
     };
   })
 );
@@ -53,32 +93,17 @@ const CliOptionsLive = Layer.effect(
 const main = Effect.gen(function* (_) {
   const options = yield* _(M.CLIOptions);
 
-  const headers = options?.headers
-    ? yield* _(
-        Effect.reduce(
-          options.headers,
-          new Array<[string, string]>(),
-          (acc, header) => {
-            const [key, value] = header.split(":");
-            if (!key || !value) {
-              return Effect.fail(new M.HeaderParseError());
-            }
-            acc.push([key, value]);
-            return Effect.succeed(acc);
-          }
-        )
-      )
-    : [];
-
   const providedFetch = yield* _(M.Fetch);
+
+  const body = Option.getOrUndefined(options.data);
 
   const res = yield* _(
     Effect.tryPromise({
       try: (signal) =>
         providedFetch(options.url, {
-          ...(options?.method && { method: options.method }),
-          ...(options?.data && { body: options.data }),
-          headers,
+          ...(body && { body }),
+          method: options.method,
+          headers: Object.fromEntries(options.headers),
           signal,
         }),
       catch: (error) => new M.UnknownError({ error }),
@@ -105,11 +130,12 @@ const main = Effect.gen(function* (_) {
   buffer.push(text);
 
   const finalString = buffer.join("\n");
-  if (options?.output) {
-    Bun.write(options.output, finalString);
-  } else {
-    console.log(finalString);
-  }
+  yield* _(
+    Effect.match(options.output, {
+      onSuccess: (output) => Effect.sync(() => Bun.write(output, finalString)),
+      onFailure: () => Console.log(finalString),
+    })
+  );
 });
 
 await pipe(

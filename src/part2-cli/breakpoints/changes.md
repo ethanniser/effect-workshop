@@ -32,6 +32,12 @@
 
 - parse cli args in effect
 
-- use effect/platform for http?
+- use effect/platform for http + fs
 
 - use effect/cli for args processing (`Command.provideSync`)
+
+- scheduling, first in old then in new
+
+## TODO
+
+- Move all from 2 on, make fs at bottom effectful
