@@ -128,11 +128,12 @@ const main = Effect.gen(function* (_) {
   buffer.push(text);
 
   const finalString = buffer.join("\n");
-  if (options?.output) {
-    Bun.write(options.output, finalString);
-  } else {
-    console.log(finalString);
-  }
+  yield* _(
+    Effect.match(Option.fromNullable(options.output), {
+      onSuccess: (output) => Effect.sync(() => Bun.write(output, finalString)),
+      onFailure: () => Console.log(finalString),
+    })
+  );
 });
 
 await pipe(

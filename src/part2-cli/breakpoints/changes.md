@@ -4,6 +4,7 @@
 
 - `main` now returns an `Effect`
 - `fetch` and `res.text()` wrapped in `yield* _(Effect.tryPromise(…))`
+- final console log / file write moved to Effect
 - `main` passed to `Effect.runPromise` to 'run' it
 
 ### 2 -> 3 - Adding typed Errors
@@ -28,16 +29,18 @@
 
 ### 4 -> 5 - Parse cli args in effect
 
--
+- parse cli args from effect instead of `meow`
+- use `Schema.transform` to split header strings
 
-- parse cli args in effect
+### 5 -> 6 - Adding @effect/platform
 
 - use effect/platform for http + fs
+- replace self built process.exit with runMain
+
+### 6 -> 7 - Utilizing @effect/cli
 
 - use effect/cli for args processing (`Command.provideSync`)
 
-- scheduling, first in old then in new
+### 7 -> 8 Scheduling without Effect
 
-## TODO
-
-- Move all from 2 on, make fs at bottom effectful
+### 8 -> 9 Scheduling in Effect

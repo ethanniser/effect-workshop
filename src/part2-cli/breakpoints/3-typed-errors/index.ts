@@ -1,4 +1,4 @@
-import { Console, Effect, Exit, pipe } from "effect";
+import { Console, Effect, Exit, Option, pipe } from "effect";
 import meow from "meow";
 import * as M from "./model";
 
@@ -130,10 +130,12 @@ function main(url: string, options?: CLIOptions) {
     buffer.push(text);
 
     const finalString = buffer.join("\n");
-    if (options?.output) {
-      Bun.write(options.output, finalString);
-    } else {
-      console.log(finalString);
-    }
+    yield* _(
+      Effect.match(Option.fromNullable(options?.output), {
+        onSuccess: (output) =>
+          Effect.sync(() => Bun.write(output, finalString)),
+        onFailure: () => Console.log(finalString),
+      })
+    );
   });
 }
