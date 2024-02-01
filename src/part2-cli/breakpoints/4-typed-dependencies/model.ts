@@ -16,6 +16,8 @@ export class UnknownError extends Data.TaggedError("UnknownError")<{
 
 export class TextDecodeError extends Data.TaggedError("TextDecodeError") {}
 
+export class HeaderParseError extends Data.TaggedError("HeaderParseError") {}
+
 type Fetch = {
   readonly _: unique symbol;
 };

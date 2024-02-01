@@ -18,44 +18,37 @@ import {
 } from "effect";
 import * as Schema from "@effect/schema/Schema";
 import { BunContext, Runtime, FileSystem } from "@effect/platform-bun";
-import { Args, CliApp, Command, Options, ValidationError } from "@effect/cli";
+import { Args, Command, Options } from "@effect/cli";
 import { HttpClient, HttpClientLive } from "./httpClient";
 import { DurationFromString, HashMapFromStrings } from "./schema";
 import * as ParseResult from "@effect/schema/ParseResult";
 
-const textArg = Args.text({ name: "text" });
-type CommandLineArgs = {
-  readonly _: unique symbol;
-};
-const CommandLineArgs = Context.Tag<CommandLineArgs, string[]>(
-  "CommandLineArgs"
-);
-const CliLive: Layer.Layer<
-  CliApp.CliApp.Environment | CommandLineArgs,
-  ValidationError.ValidationError,
-  void
-> = Command.make(
-  "echo",
-  {
-    textArg,
-  },
-  ({ textArg }) => Console.log(textArg)
-).pipe(
+const fooOption = Options.text("foo");
+
+const Tag = Context.Tag<string>("tag");
+
+const handle = Effect.flatMap(Tag, (_) => Console.log(_));
+
+const run = Command.make("bend", { fooOption }).pipe(
+  Command.withHandler(() => handle),
+  Command.provideEffect(Tag, ({ fooOption }) =>
+    Effect.succeed(Tag.of(fooOption))
+  ),
+  Command.withDescription("an effect http client"),
   Command.run({
-    name: "echo",
+    name: "Test",
     version: "1.0.0",
   })
-) as any;
-
-const CommandLineArgsLive = Layer.sync(
-  CommandLineArgs,
-  () => globalThis.process.argv
 );
 
-pipe(
-  CliLive,
-  Layer.provide(BunContext.layer),
-  Layer.provide(CommandLineArgsLive),
-  Layer.launch,
+const main = Effect.suspend(() => run(globalThis.process.argv.slice(2)));
+
+main.pipe(
+  Effect.provide(BunContext.layer),
+  Effect.provide(HttpClientLive),
+  Effect.withConfigProvider(
+    ConfigProvider.nested(ConfigProvider.fromEnv(), "BEND")
+  ),
+  Effect.tapErrorCause(Effect.logError),
   Runtime.runMain
 );

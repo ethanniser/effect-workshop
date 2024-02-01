@@ -25,8 +25,12 @@
 - provide `CliOptions` to `main` using `Effect.provide`
 - use `Effect.match` to move final `process.exit` calls into effect
 
+### 4 -> 5 - Parse cli args in effect
+
+- define `CliOptionsSchema` and derive `CliOptionsImpl` type from it
+
 - parse cli args in effect
 
 - use effect/platform for http?
 
-- use effectc/cli for args processing
+- use effect/cli for args processing (`Command.provideSync`)

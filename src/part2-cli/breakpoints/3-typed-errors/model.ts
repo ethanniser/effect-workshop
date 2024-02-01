@@ -10,6 +10,8 @@ import { Data } from "effect";
 // export const { UnknownError, TextDecodeError } = Data.taggedEnum<FetchError>();
 export type FetchError = UnknownError | TextDecodeError;
 
+export class HeaderParseError extends Data.TaggedError("HeaderParseError") {}
+
 export class UnknownError extends Data.TaggedError("UnknownError")<{
   readonly error: unknown;
 }> {}

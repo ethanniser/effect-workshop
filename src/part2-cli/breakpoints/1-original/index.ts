@@ -69,19 +69,19 @@ interface CLIOptions {
 }
 
 async function main(url: string, options?: CLIOptions) {
-  const headerMap = options?.headers?.reduce((acc, header) => {
+  const headers = options?.headers?.reduce((acc, header) => {
     const [key, value] = header.split(":");
     if (!key || !value) {
       throw new Error("Invalid header");
     }
-    acc.set(key, value);
+    acc.push([key, value]);
     return acc;
-  }, new Map<string, string>());
+  }, new Array<[string, string]>());
 
   const res = await fetch(url, {
     ...(options?.method && { method: options.method }),
     ...(options?.data && { body: options.data }),
-    ...(headerMap && { headers: Array.from(headerMap.entries()) }),
+    ...(headers && { headers }),
   });
 
   const buffer: string[] = [];

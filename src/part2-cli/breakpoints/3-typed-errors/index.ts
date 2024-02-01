@@ -80,14 +80,22 @@ interface CLIOptions {
 
 function main(url: string, options?: CLIOptions) {
   return Effect.gen(function* (_) {
-    const headerMap = options?.headers?.reduce((acc, header) => {
-      const [key, value] = header.split(":");
-      if (!key || !value) {
-        throw new Error("Invalid header");
-      }
-      acc.set(key, value);
-      return acc;
-    }, new Map<string, string>());
+    const headers = options?.headers
+      ? yield* _(
+          Effect.reduce(
+            options.headers,
+            new Array<[string, string]>(),
+            (acc, header) => {
+              const [key, value] = header.split(":");
+              if (!key || !value) {
+                return Effect.fail(new M.HeaderParseError());
+              }
+              acc.push([key, value]);
+              return Effect.succeed(acc);
+            }
+          )
+        )
+      : [];
 
     const res = yield* _(
       Effect.tryPromise({
@@ -95,7 +103,7 @@ function main(url: string, options?: CLIOptions) {
           fetch(url, {
             ...(options?.method && { method: options.method }),
             ...(options?.data && { body: options.data }),
-            ...(headerMap && { headers: Array.from(headerMap.entries()) }),
+            headers,
             signal,
           }),
         catch: (error) => new M.UnknownError({ error }),

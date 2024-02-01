@@ -1,20 +1,13 @@
 import { Context, Data } from "effect";
-
-// export type FetchError = Data.TaggedEnum<{
-//   UnknownError: {
-//     error: unknown;
-//   };
-//   TextDecodeError: {};
-// }>;
-
-// export const { UnknownError, TextDecodeError } = Data.taggedEnum<FetchError>();
-// export type FetchError = UnknownError | TextDecodeError;
+import * as S from "@effect/schema/Schema";
 
 export class UnknownError extends Data.TaggedError("UnknownError")<{
   readonly error: unknown;
 }> {}
 
 export class TextDecodeError extends Data.TaggedError("TextDecodeError") {}
+
+export class HeaderParseError extends Data.TaggedError("HeaderParseError") {}
 
 type Fetch = {
   readonly _: unique symbol;
@@ -26,14 +19,16 @@ type CLIOptions = {
   readonly _: unique symbol;
 };
 
-interface CLIOptionsImpl {
-  url: string;
-  method: string;
-  data: string | undefined;
-  headers: string[] | undefined;
-  output: string | undefined;
-  include: boolean | undefined;
-}
+const CliOptionsSchema = S.struct({
+  url: S.string,
+  method: S.string,
+  data: S.optional(S.string),
+  headers: S.optional(S.array(S.string)),
+  output: S.optional(S.string),
+  include: S.optional(S.boolean),
+});
+
+interface CLIOptionsImpl extends S.Schema.To<typeof CliOptionsSchema> {}
 
 export const CLIOptions = Context.Tag<CLIOptions, CLIOptionsImpl>("CLIOptions");
 
