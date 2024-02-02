@@ -51,7 +51,7 @@ function getCliOptionMultiple(
 const CliOptionsLive = Layer.effect(
   M.CLIOptions,
   Effect.gen(function* (_) {
-    const args = yield* _(Effect.sync(() => process.argv.slice(2)));
+    const args = yield* _(Effect.sync(() => process.argv));
 
     const method = getCliOption(args, { name: "method" }).pipe(
       Option.getOrElse(() => "GET")

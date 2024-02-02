@@ -1,6 +1,7 @@
 import { Console, Effect, Layer, Option, pipe } from "effect";
 import * as M from "./model";
 import * as S from "@effect/schema/Schema";
+import { FileSystem, Runtime, BunContext } from "@effect/platform-bun";
 
 const StringPairsFromStrings = S.array(S.string).pipe(
   S.filter((arr) => arr.every((s) => s.split(": ").length === 2)),
@@ -51,7 +52,7 @@ function getCliOptionMultiple(
 const CliOptionsLive = Layer.effect(
   M.CLIOptions,
   Effect.gen(function* (_) {
-    const args = yield* _(Effect.sync(() => process.argv.slice(2)));
+    const args = yield* _(Effect.sync(() => process.argv));
 
     const method = getCliOption(args, { name: "method" }).pipe(
       Option.getOrElse(() => "GET")
