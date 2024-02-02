@@ -1,7 +1,8 @@
-import { Console, Effect, Layer, Option, pipe } from "effect";
+import { Console, Effect, Function, Layer, Match, Option, pipe } from "effect";
 import * as M from "./model";
 import * as S from "@effect/schema/Schema";
 import { FileSystem, Runtime, BunContext } from "@effect/platform-bun";
+import * as Http from "@effect/platform-bun/HttpClient";
 
 const StringPairsFromStrings = S.array(S.string).pipe(
   S.filter((arr) => arr.every((s) => s.split(": ").length === 2)),
@@ -54,19 +55,20 @@ const CliOptionsLive = Layer.effect(
   Effect.gen(function* (_) {
     const args = yield* _(Effect.sync(() => process.argv));
 
-    const method = getCliOption(args, { name: "method" }).pipe(
+    const method = getCliOption(args, { name: "method", alias: "X" }).pipe(
       Option.getOrElse(() => "GET")
     );
-    const data = getCliOption(args, { name: "data" });
+
+    const data = getCliOption(args, { name: "data", alias: "d" });
 
     const headers = yield* _(
-      getCliOptionMultiple(args, { name: "headers" }),
+      getCliOptionMultiple(args, { name: "headers", alias: "H" }),
       S.decode(StringPairsFromStrings),
       Effect.mapError(() => new M.HeaderParseError())
     );
 
-    const output = getCliOption(args, { name: "output" });
-    const include = getCliOption(args, { name: "include" }).pipe(
+    const output = getCliOption(args, { name: "output", alias: "O" });
+    const include = getCliOption(args, { name: "include", alias: "i" }).pipe(
       Option.flatMap((_) =>
         ["true", "false"].includes(_) ? Option.some(_) : Option.none()
       ),
@@ -74,7 +76,7 @@ const CliOptionsLive = Layer.effect(
     );
 
     const url = yield* _(
-      Option.fromNullable(null),
+      Option.fromNullable("https://jsonplaceholder.typicode.com/posts/1"),
       Effect.mapError(
         () => new M.CliOptionsParseError({ error: "No url provided" })
       )
@@ -94,65 +96,61 @@ const CliOptionsLive = Layer.effect(
 const main = Effect.gen(function* (_) {
   const options = yield* _(M.CLIOptions);
 
-  const providedFetch = yield* _(M.Fetch);
+  const fetch = yield* _(Http.client.Client);
 
   const body = Option.getOrUndefined(options.data);
 
-  const res = yield* _(
-    Effect.tryPromise({
-      try: (signal) =>
-        providedFetch(options.url, {
-          ...(body && { body }),
-          method: options.method,
-          headers: Object.fromEntries(options.headers),
-          signal,
-        }),
-      catch: (error) => new M.UnknownError({ error }),
-    })
+  const req = yield* _(
+    Match.value(options.method)
+      .pipe(
+        Match.when("GET", () => Http.request.get),
+        Match.when("POST", () => Http.request.post),
+        Match.when("PUT", () => Http.request.put),
+        Match.when("PATCH", () => Http.request.patch),
+        Match.when("DELETE", () => Http.request.del),
+        Match.option
+      )
+      .pipe(
+        Effect.map((reqBuilder) =>
+          reqBuilder(options.url).pipe(
+            Http.request.setHeaders(options.headers),
+            body ? Http.request.textBody(body) : Function.identity
+          )
+        )
+      )
   );
+
+  const res = yield* _(fetch(req));
 
   const buffer: string[] = [];
 
-  if (options?.include) {
-    buffer.push(`${res.status} ${res.statusText}`);
-    res.headers.forEach((value, key) => {
+  if (Option.isSome(options.include)) {
+    buffer.push(`${res.status}`);
+    Object.entries(res.headers).forEach(([key, value]) => {
       buffer.push(`${key}: ${value}`);
     });
     // Add an empty line to separate headers from body
     buffer.push("");
   }
 
-  const text = yield* _(
-    Effect.tryPromise({
-      try: () => res.text(),
-      catch: () => new M.TextDecodeError(),
-    })
-  );
+  const text = yield* _(res.text);
   buffer.push(text);
 
   const finalString = buffer.join("\n");
+
+  const fs = yield* _(FileSystem.FileSystem);
   yield* _(
-    Effect.match(options.output, {
-      onSuccess: (output) => Effect.sync(() => Bun.write(output, finalString)),
+    Effect.matchEffect(options.output, {
+      onSuccess: (output) => fs.writeFileString(output, finalString),
       onFailure: () => Console.log(finalString),
     })
   );
 });
 
-await pipe(
+pipe(
   main,
-  Effect.catchTags({
-    TextDecodeError: (error) => Console.error("Text decode error: ", error),
-    UnknownError: (error) => Console.error("Unknown error: ", error),
-  }),
-  Effect.provideService(M.Fetch, globalThis.fetch),
   Effect.provide(CliOptionsLive),
-  Effect.match({
-    onSuccess: () => process.exit(0),
-    onFailure: (cause) => {
-      console.error(cause);
-      process.exit(1);
-    },
-  }),
-  Effect.runPromise
+  Effect.provide(Http.client.layer),
+  Effect.provide(BunContext.layer),
+  Runtime.runMain
 );

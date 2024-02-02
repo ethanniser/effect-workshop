@@ -53,19 +53,20 @@ const CliOptionsLive = Layer.effect(
   Effect.gen(function* (_) {
     const args = yield* _(Effect.sync(() => process.argv));
 
-    const method = getCliOption(args, { name: "method" }).pipe(
+    const method = getCliOption(args, { name: "method", alias: "X" }).pipe(
       Option.getOrElse(() => "GET")
     );
-    const data = getCliOption(args, { name: "data" });
+
+    const data = getCliOption(args, { name: "data", alias: "d" });
 
     const headers = yield* _(
-      getCliOptionMultiple(args, { name: "headers" }),
+      getCliOptionMultiple(args, { name: "headers", alias: "H" }),
       S.decode(StringPairsFromStrings),
       Effect.mapError(() => new M.HeaderParseError())
     );
 
-    const output = getCliOption(args, { name: "output" });
-    const include = getCliOption(args, { name: "include" }).pipe(
+    const output = getCliOption(args, { name: "output", alias: "O" });
+    const include = getCliOption(args, { name: "include", alias: "i" }).pipe(
       Option.flatMap((_) =>
         ["true", "false"].includes(_) ? Option.some(_) : Option.none()
       ),

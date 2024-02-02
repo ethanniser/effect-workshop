@@ -22,6 +22,7 @@ import { Args, Command, Options } from "@effect/cli";
 import { HttpClient, HttpClientLive } from "./httpClient";
 import { DurationFromString, HashMapFromStrings } from "./schema";
 import * as ParseResult from "@effect/schema/ParseResult";
+import * as Http from "@effect/platform-bun/HttpClient";
 
 const fooOption = Options.text("foo");
 
@@ -52,3 +53,5 @@ main.pipe(
   Effect.tapErrorCause(Effect.logError),
   Runtime.runMain
 );
+
+Http.headers.empty;

@@ -8,12 +8,6 @@ export class TextDecodeError extends Data.TaggedError("TextDecodeError") {}
 
 export class HeaderParseError extends Data.TaggedError("HeaderParseError") {}
 
-type Fetch = {
-  readonly _: unique symbol;
-};
-
-export const Fetch = Context.Tag<Fetch, typeof globalThis.fetch>("Fetch");
-
 type CLIOptions = {
   readonly _: unique symbol;
 };
