@@ -34,12 +34,12 @@
 
 ### 5 -> 6 - Adding @effect/platform
 
-- use effect/platform for http + fs
+- use @effect/platform for http + fs
 - replace self built process.exit with runMain
 
 ### 6 -> 7 - Utilizing @effect/cli
 
-- use effect/cli for args processing (`Command.provideSync`)
+- use @effect/cli for args processing
 
 ### 7 -> 8 Scheduling without Effect
 

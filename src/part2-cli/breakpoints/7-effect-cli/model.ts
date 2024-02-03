@@ -14,7 +14,7 @@ type CLIOptions = {
 
 interface CLIOptionsImpl {
   readonly url: string;
-  readonly method: string;
+  readonly method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   readonly data: Option.Option<string>;
   readonly headers: readonly (readonly [string, string])[];
   readonly output: Option.Option<string>;
