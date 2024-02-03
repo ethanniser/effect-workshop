@@ -72,7 +72,6 @@ const outputOption = Options.text("output").pipe(
 
 const repeatEveryOption = Options.text("repeat-every").pipe(
   Options.withSchema(DurationFromString),
-  // Options.optional,
   Options.withDescription(
     'repeat the request on the specific duration (e.g. "200 millis", "1 seconds", "2 minutes")'
   ),

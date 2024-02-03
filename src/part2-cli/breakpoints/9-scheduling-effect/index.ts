@@ -1,9 +1,20 @@
-import { Console, Effect, Function, Layer, Match, Option, pipe } from "effect";
+import {
+  Config,
+  Console,
+  Duration,
+  Effect,
+  Function,
+  Layer,
+  Match,
+  Option,
+  pipe,
+} from "effect";
 import * as M from "./model";
 import * as S from "@effect/schema/Schema";
 import { FileSystem, Runtime, BunContext } from "@effect/platform-bun";
 import * as Http from "@effect/platform-bun/HttpClient";
 import { Command, Options, Args } from "@effect/cli";
+import { ParseResult } from "@effect/schema";
 
 const main = Effect.gen(function* (_) {
   const options = yield* _(M.CLIOptions);
@@ -11,28 +22,21 @@ const main = Effect.gen(function* (_) {
   const fetch = yield* _(Http.client.Client);
 
   const body = Option.getOrUndefined(options.data);
+  const req = Match.value(options.method)
+    .pipe(
+      Match.when("GET", () => Http.request.get),
+      Match.when("POST", () => Http.request.post),
+      Match.when("PUT", () => Http.request.put),
+      Match.when("PATCH", () => Http.request.patch),
+      Match.when("DELETE", () => Http.request.del),
+      Match.exhaustive
+    )(options.url)
+    .pipe(
+      Http.request.setHeaders(options.headers),
+      body ? Http.request.textBody(body) : Function.identity
+    );
 
-  const req = yield* _(
-    Match.value(options.method)
-      .pipe(
-        Match.when("GET", () => Http.request.get),
-        Match.when("POST", () => Http.request.post),
-        Match.when("PUT", () => Http.request.put),
-        Match.when("PATCH", () => Http.request.patch),
-        Match.when("DELETE", () => Http.request.del),
-        Match.option
-      )
-      .pipe(
-        Effect.map((reqBuilder) =>
-          reqBuilder(options.url).pipe(
-            Http.request.setHeaders(options.headers),
-            body ? Http.request.textBody(body) : Function.identity
-          )
-        )
-      )
-  );
-
-  const res = yield* _(fetch(req));
+  const res = yield* _(fetch(req), Effect.timeout(options.timeout));
 
   const buffer: string[] = [];
 
@@ -67,6 +71,18 @@ const StringPairsFromStrings = S.array(S.string).pipe(
       arr.map((s) => s.split(": ") as unknown as readonly [string, string]),
     (arr) => arr.map((s) => s.join(": "))
   )
+);
+
+export const DurationFromString = S.transformOrFail(
+  S.string,
+  S.DurationFromSelf,
+  (value, _, ast) =>
+    ParseResult.try({
+      try: () => Duration.decode(value as Duration.DurationInput),
+      catch: (error) =>
+        ParseResult.type(ast, value, "String is not valid DurationInput"),
+    }),
+  (duration) => ParseResult.succeed(`${Duration.toMillis(duration)} millis`)
 );
 
 const urlArg = Args.text({ name: "url" }).pipe(
@@ -105,6 +121,53 @@ const includeOption = Options.boolean("include").pipe(
   Options.optional
 );
 
+const timeoutOption = Options.text("timeout").pipe(
+  Options.withFallbackConfig(
+    Config.integer("TIMEOUT").pipe(Config.withDefault("2 seconds"))
+  ),
+  Options.withSchema(DurationFromString),
+  Options.withDescription(
+    'timeout each request after the specific duration (e.g. "200 millis", "1 seconds", "2 minutes")'
+  )
+);
+
+const repeatEveryOption = Options.text("repeat-every").pipe(
+  Options.withSchema(DurationFromString),
+  Options.withDescription(
+    'repeat the request on the specific duration (e.g. "200 millis", "1 seconds", "2 minutes")'
+  ),
+  Options.optional
+);
+
+const maxRepeatsOption = Options.integer("max-repeats").pipe(
+  Options.withDescription("the maximum number of times to repeat the request"),
+  Options.optional
+);
+
+const backoffOption = Options.boolean("backoff").pipe(
+  Options.withDescription(
+    "use an exponential backoff strategy for repeat intervals"
+  ),
+  Options.optional
+);
+
+const backoffFactorOption = Options.float("backoff-factor").pipe(
+  Options.withDescription("the factor to use for exponential backoff"),
+  Options.optional
+);
+
+const backoffMaxOption = Options.text("backoff-max").pipe(
+  Options.withSchema(DurationFromString),
+  Options.withDescription(
+    "the maximum number of time to wait between requests, uses the same unit as --repeat-every"
+  ),
+  Options.optional
+);
+
+const urlArgument = Args.text({ name: "url" }).pipe(
+  Args.withDescription("the url to fetch")
+);
+
 const cli = pipe(
   Command.make("root", {
     url: urlArg,
@@ -113,6 +176,12 @@ const cli = pipe(
     headers: headersOption,
     output: outputOption,
     include: includeOption,
+    timeout: timeoutOption,
+    repeatEvery: repeatEveryOption,
+    maxRepeats: maxRepeatsOption,
+    backoff: backoffOption,
+    backoffFactor: backoffFactorOption,
+    backoffMax: backoffMaxOption,
   }),
   Command.withHandler(() => main),
   Command.provideSync(M.CLIOptions, (_) => _),

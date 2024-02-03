@@ -40,6 +40,7 @@
 ### 6 -> 7 - Utilizing @effect/cli
 
 - use @effect/cli for args processing
+- refactor req builder now that have proper schema for method type
 - show help and wizard
 
 ### 7 -> 8 Scheduling without Effect
@@ -50,3 +51,10 @@
 - finally, add exponential backoff
 
 ### 8 -> 9 Scheduling in Effect
+
+- start with basic interruption using `Effect.timeout`
+- timeoutOption has config backed default
+- nested config
+- `Effect.retry` / `Effect.repeat`
+- basic schedules
+- exponential backoff
