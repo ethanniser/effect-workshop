@@ -40,7 +40,13 @@
 ### 6 -> 7 - Utilizing @effect/cli
 
 - use @effect/cli for args processing
+- show help and wizard
 
 ### 7 -> 8 Scheduling without Effect
+
+- start with basic interruption using `AbortController` + `setTimeout` + `clearTimeout`
+- move on to retrying with for loop and try/catch
+- then add simple spaced repetition
+- finally, add exponential backoff
 
 ### 8 -> 9 Scheduling in Effect

@@ -11,6 +11,11 @@ const cli = meow(
       --data,   -d  The data to send
       --output, -o  The output file
       --include, -i Include the HTTP headers in the output
+      --timeout, -t The timeout for the request (in milliseconds)
+      --retry, -r The number of times to retry the request
+      --gap, -g The time to wait between retries (in milliseconds)
+      --backoffFactor, -b The factor to use for exponential backoff
+      --backoffMax, -B The maximum number of seconds to wait between requests
 `,
   {
     importMeta: import.meta,
@@ -42,6 +47,31 @@ const cli = meow(
         shortFlag: "i",
         isRequired: false,
       },
+      timeout: {
+        type: "number",
+        shortFlag: "t",
+        isRequired: false,
+      },
+      retry: {
+        type: "number",
+        shortFlag: "r",
+        isRequired: false,
+      },
+      gap: {
+        type: "number",
+        shortFlag: "g",
+        isRequired: false,
+      },
+      backoffFactor: {
+        type: "number",
+        shortFlag: "b",
+        isRequired: false,
+      },
+      backoffMax: {
+        type: "number",
+        shortFlag: "B",
+        isRequired: false,
+      },
     },
   }
 );
@@ -66,6 +96,46 @@ interface CLIOptions {
   headers: string[] | undefined;
   output: string | undefined;
   include: boolean | undefined;
+  timeout: number | undefined;
+  retry: number | undefined;
+  gap: number | undefined;
+  backoffFactor: number | undefined;
+  backoffMax: number | undefined;
+}
+
+async function runRequest(
+  url: string,
+  options: {
+    method?: string;
+    data?: string | undefined;
+    headers?: string[][] | undefined;
+    timeout?: number | undefined;
+  }
+) {
+  const abortController = new AbortController();
+
+  let timeout: NodeJS.Timeout | undefined = undefined;
+
+  if (options?.timeout) {
+    timeout = setTimeout(() => abortController.abort(), options.timeout);
+  }
+
+  const res = await fetch(url, {
+    ...(options?.method && { method: options.method }),
+    ...(options?.data && { body: options.data }),
+    ...(options?.headers && { headers: options.headers }),
+    signal: abortController.signal,
+  }).finally(() => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  });
+
+  return res;
+}
+
+async function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function main(url: string, options?: CLIOptions) {
@@ -78,11 +148,30 @@ async function main(url: string, options?: CLIOptions) {
     return acc;
   }, new Array<[string, string]>());
 
-  const res = await fetch(url, {
-    ...(options?.method && { method: options.method }),
-    ...(options?.data && { body: options.data }),
-    ...(headers && { headers }),
-  });
+  //   const res = await runRequest(url, { ...options, headers });
+  let res: Response | undefined = undefined;
+
+  for (let i = 0; i < (options?.retry ?? 1); i++) {
+    try {
+      res = await runRequest(url, { ...options, headers });
+      break;
+    } catch (e) {
+      if (i === (options?.retry ?? 1) - 1) {
+        throw e;
+      }
+    }
+    if (options?.gap) {
+      const time = options?.backoffFactor ? options.gap * 2 ** i : options.gap;
+      if (options?.backoffMax && time > options.backoffMax) {
+        break;
+      }
+      await wait(time);
+    }
+  }
+
+  if (!res) {
+    throw new Error("No response");
+  }
 
   const buffer: string[] = [];
 
