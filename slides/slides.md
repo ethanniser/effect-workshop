@@ -15,7 +15,7 @@ info: |
   [Ethan Niser](https://twitter.com/ethanniser) at [Effect Days 2024](https://effect.website/events/effect-days)
 ---
 
-# Effect Beginner/Intermediate Workshop
+<div class="text-5xl">Effect Beginner/Intermediate Workshop</div>
 
 An interactive introduction to [Effect](https://effect.website)
 
@@ -148,13 +148,11 @@ layout: section
 
 # What is an 'Effect'?
 
-<v-clicks>
-  
-  - "Something brought about by a cause or agent"
-  - Side effects?
-  - The `Effect` type
-  
-</v-clicks>
+<ul>
+  <li>"Something brought about by a cause or agent"</li>
+  <li v-click>Side effects?</li>
+  <li v-click>The `Effect` type</li>
+</ul>
 
 ---
 
@@ -163,3 +161,140 @@ layout: quote
 ```
 
 > “an `Effect` is a description of a program that is lazy and immutable”
+
+<!--
+
+  SNIPPET: 1-1
+
+- what is a program?
+    - a series of steps - a short javascript script maybe
+    - only when we run the script through node it gets executed
+- what does it mean to be lazy?
+    - delaying work until its needed
+    - so we delay execution of the script until we explicitly run it
+    - and even when we run it some aspects are lazy right
+    - we execute line by line, and exit on a uncaught error
+- what does it mean to be immutable?
+    - unable to be mutated
+    - so our script here is immutable after we pass it to node
+    - same goes for basically all languages- except Malbolge I guess lol
+ -->
+
+---
+
+```yaml
+layout: fact
+```
+
+# Functions!
+
+---
+
+```ts
+type Function<Args, T> = (...args: Args) => T;
+```
+
+<v-click>
+
+```ts
+type SaferFunction<Args, T, E> = (...args: Args) => T | E;
+```
+
+</v-click>
+
+<br><br>
+
+<v-click>
+
+```ts
+declare function Foo(): "baz" | "bar" | Error;
+const result = Foo();
+const error = result instanceof Error;
+
+declare function Foo2(): "baz" | "bar";
+const result2 = Foo2();
+const error = result2 !== "baz";
+```
+
+</v-click>
+
+<!--
+between first and second click, what might some problems be with this?
+ -->
+
+---
+
+```ts
+declare function Inner(): "baz" | "bar" | Error;
+
+function Outer(): number | Error {
+  const result = Inner();
+  if (result instanceof Error) {
+    return result;
+  }
+  return result.length;
+}
+```
+
+<br>
+
+<h2 v-click>Forced to handle errors at <b>every</b> single point, even if we don't care</h2>
+
+<!-- looks alot like go right? -->
+
+---
+
+## `Effect`s are different
+
+<br><br>
+
+```ts
+type Effect<_, Error, Value> = /* unimportant */;
+```
+
+---
+
+```ts
+declare const Inner: Effect<never, Error, "baz" | "bar">;
+
+// outer: Effect<never, Error, number>
+const outer = Effect.gen(function* (_) {
+  // result: "baz" | "bar"
+  const result = yield* _(Inner);
+  return result.length;
+});
+```
+
+---
+
+```ts
+declare const Inner1: Effect<never, Error, "baz" | "bar">;
+declare const Inner2: Effect<never, 0 | 1, number>;
+
+// outer: Effect<never, Error | 0 | 1, number>
+const outer = Effect.gen(function* (_) {
+  // result: "baz" | "bar"
+  const result = yield* _(Inner);
+  const result2 = yield* _(Inner2);
+  return result.length + result2;
+});
+```
+
+---
+
+<!-- prettier-ignore -->
+```ts
+declare const Inner1: Effect<never, Error, "baz" | "bar">;
+declare const Inner2: Effect<never, 0 | 1, number>;
+
+// outer: Effect<never, Error | 0 | 1, number>
+const outer = Effect.gen(function* (_) {
+  // result: "baz" | "bar"
+  const result = yield* _(Inner);
+  const result2 = yield* _(Inner2);
+  return result.length + result2;
+});
+// noErrors: Effect<never, never, number>
+const noErrors = 
+  Effect.catchAll(outer, (e) => Effect.succeed(-1));
+```

@@ -1,0 +1,15 @@
+html {
+  font-size: 125%;
+}
+
+li {
+  font-size: 150%;
+}
+
+blockquote {
+  font-size: 130% !important;
+}
+
+pre code {
+  font-size: 180% !important;
+}
