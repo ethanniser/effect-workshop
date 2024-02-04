@@ -298,3 +298,108 @@ const outer = Effect.gen(function* (_) {
 const noErrors = 
   Effect.catchAll(outer, (e) => Effect.succeed(-1));
 ```
+
+---
+
+```ts
+import { db } from "./db";
+
+function getUser(id: number): User {
+  return db.users.getById(id);
+}
+```
+
+```ts
+function getUser(db: DataBase, id: number): User {
+  return db.users.getById(id);
+}
+```
+
+---
+
+```ts
+function updateEmail(
+  db: DataBase,
+  logger: Logger,
+  telemetry: Telemetry,
+  id: number,
+  newEmail: string
+): User {
+  const user = getUser(db, id);
+  db.users.updateEmail(id, newEmail);
+  logger.info(`Updated email for user ${id}`);
+  telemetry.record("email-updated", { id });
+  return user;
+}
+```
+
+---
+
+```ts
+type Effect<Requirements, Error, Value>
+```
+
+```ts
+declare const getUser: Effect<DataBase, NotFoundError, User>;
+```
+
+```ts
+declare const updateEmail: Effect<
+  DataBase | Logger | Telemetry,
+  NotFoundError,
+  User
+>;
+```
+
+```ts
+const main: Effect<Telemetry, NotFoundError, User> = pipe(
+  getUser,
+  Effect.provideService(DataBase, mockDb),
+  Effect.provideService(Logger, logger)
+);
+```
+
+---
+
+# Sync vs Async
+
+```ts
+declare async function getUser(id: number): Promise<User>;
+```
+
+<!-- prettier-ignore -->
+```ts
+declare function getUser(id: number): 
+  Effect<UserRepo, NotFoundError, User>;
+```
+
+<!-- when you call this function what happens, what about this function? -->
+
+---
+
+# Execution
+
+```ts
+const foo = () => Date.now();
+```
+
+```ts
+console.log(foo); // [Function: foo]
+```
+
+```ts
+console.log(foo()); // 1707076796922
+```
+
+```ts
+const effectFoo = Effect.sync(() => Date.now());
+```
+
+```ts
+console.log(effectFoo);
+// { _id: 'Effect', _op: 'Sync', i0: [Function: foo] }
+```
+
+```ts
+console.log(Effect.runSync(effectFoo)); // 1707076796922
+```
