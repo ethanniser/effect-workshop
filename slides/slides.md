@@ -353,7 +353,7 @@ declare const updateEmail: Effect<
 
 ```ts
 const main: Effect<Telemetry, NotFoundError, User> = pipe(
-  getUser,
+  updateEmail,
   Effect.provideService(DataBase, mockDb),
   Effect.provideService(Logger, logger)
 );

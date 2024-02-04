@@ -2,7 +2,7 @@ html {
   font-size: 125%;
 }
 
-li {
+li not(.note) {
   font-size: 150%;
 }
 
