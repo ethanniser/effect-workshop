@@ -19,3 +19,7 @@ yarn i
 pnpm i
 bun i
 ```
+
+### An editor that supports LSP
+
+Hovering to see types, autocompletion, and go-to-definition are a must for this workshop. I'll be using VSCode, but you can use any editor that supports LSP.

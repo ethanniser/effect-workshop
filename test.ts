@@ -1,28 +1,21 @@
-import { Console, Effect } from "effect";
-import { BunContext, Runtime } from "@effect/platform-bun";
-import { Command, Options } from "@effect/cli";
+import { Data, Hash, Equal, HashMap } from "effect";
 
-const optionOne = Options.text("one").pipe(Options.optional);
+class Foo {
+  constructor(readonly a: number) {}
+  [Hash.symbol]() {
+    return 0;
+  }
+  [Equal.symbol](that: Equal.Equal) {
+    return false;
+  }
+}
 
-const run = Command.make(
-  "test",
-  //   { optionOne },
-  //   ({ optionOne }) => Console.log(optionOne)
-  {
-    nest: [{ optionOne }],
-  },
-  ({ nest: [{ optionOne }] }) => Console.log(optionOne)
-).pipe(
-  Command.run({
-    name: "Test",
-    version: "1.0.0",
-  })
-);
+let x = new Foo(1);
 
-const main = Effect.suspend(() => run(globalThis.process.argv));
-
-main.pipe(
-  Effect.provide(BunContext.layer),
-  Effect.tapErrorCause(Effect.logError),
-  Runtime.runMain
-);
+let hm = HashMap.empty<Foo, string>();
+hm = HashMap.set(hm, new Foo(1), "one");
+console.log(HashMap.toEntries(hm));
+hm = HashMap.set(hm, new Foo(2), "two");
+console.log(HashMap.toEntries(hm));
+hm = HashMap.set(hm, new Foo(2), "three");
+console.log(HashMap.toEntries(hm));
