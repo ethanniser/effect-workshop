@@ -22,18 +22,25 @@ interface FetchOptions {
   readonly headers?: HashMap.HashMap<string, string>;
 }
 
-interface HttpClient {
-  readonly _tag: "HttpClient";
-  readonly fetch: (
-    url: string,
-    options?: FetchOptions
-  ) => Effect.Effect<never, FetchError, FetchResponse>;
-}
+// interface HttpClient {
+//   readonly _tag: "HttpClient";
+//   readonly fetch: (
+//     url: string,
+//     options?: FetchOptions
+//   ) => Effect.Effect<never, FetchError, FetchResponse>;
+// }
 
-export const HttpClient = Context.Tag<HttpClient>("HttpClient");
+export class HttpClient extends Context.Tag("HttpClient")<
+  HttpClient,
+  {
+    readonly fetch: (
+      url: string,
+      options?: FetchOptions
+    ) => Effect.Effect<FetchResponse, FetchError>;
+  }
+>() {}
 
 export const HttpClientLive = Layer.succeed(HttpClient, {
-  _tag: "HttpClient",
   fetch(url, options) {
     return Effect.gen(function* (_) {
       const response = yield* _(

@@ -2,25 +2,20 @@
 
 import {
   Config,
-  ConfigError,
   ConfigProvider,
   Console,
-  Data,
   Duration,
   Effect,
-  Either,
   HashMap,
-  Layer,
   Option,
   Schedule,
-  pipe,
 } from "effect";
 import * as Schema from "@effect/schema/Schema";
-import { BunContext, Runtime, FileSystem } from "@effect/platform-bun";
+import { BunContext, BunRuntime } from "@effect/platform-bun";
+import { FileSystem } from "@effect/platform";
 import { Args, Command, Options } from "@effect/cli";
 import { HttpClient, HttpClientLive } from "./httpClient";
 import { DurationFromString, HashMapFromStrings } from "./schema";
-import * as ParseResult from "@effect/schema/ParseResult";
 
 const BendConfig = Config.all({
   baseUrl: Config.string("BASE_URL").pipe(Config.option),
@@ -107,10 +102,6 @@ const urlArgument = Args.text({ name: "url" }).pipe(
   Args.withDescription("the url to fetch")
 );
 
-class TimeoutError extends Data.TaggedClass("TimeoutError")<{
-  readonly timeout: Duration.Duration;
-}> {}
-
 const run = Command.make(
   "bend",
   {
@@ -181,15 +172,7 @@ const run = Command.make(
               ...(headers && { headers }),
             }),
 
-            Effect.timeout(timeoutOption),
-            Effect.mapError((error) => {
-              switch (error._tag) {
-                case "NoSuchElementException":
-                  return new TimeoutError({ timeout: timeoutOption });
-                default:
-                  return error;
-              }
-            })
+            Effect.timeout(timeoutOption)
           );
 
           yield* _(Console.log("STATUS: ", result.status, result.statusText));
@@ -224,8 +207,7 @@ const run = Command.make(
       );
     }).pipe(
       Effect.catchTags({
-        TimeoutError: (error) =>
-          Console.error(`Timeout after ${Duration.toMillis(error.timeout)}ms`),
+        TimeoutException: (error) => Console.error(error.message),
         TextDecodeError: () => Console.error("Text decode error"),
       })
     )
@@ -246,7 +228,7 @@ main.pipe(
     ConfigProvider.nested(ConfigProvider.fromEnv(), "BEND")
   ),
   Effect.tapErrorCause(Effect.logError),
-  Runtime.runMain
+  BunRuntime.runMain
 );
 
 // bun run index.ts -X POST -H "name: Ethan" --data "{ \"age\": 18 }" --repeat-every "100 millis" --backoff --backoff-factor 2.0 --backoff-max "2 seconds" http://localhost:3000/foo
