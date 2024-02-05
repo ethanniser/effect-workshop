@@ -15,7 +15,10 @@ import WebSocket from "ws";
 import * as S from "@effect/schema/Schema";
 import * as C from "../shared/config";
 
-export const WebSocketConnection = Context.Tag<M.ClientWebSocketConnection>();
+export class WebSocketConnection extends Context.Tag("WebSocketConnection")<
+  WebSocketConnection,
+  M.ClientWebSocketConnection
+>() {}
 
 export const WebSocketConnectionLive = (name: string, color: M.Color) =>
   Layer.effect(
@@ -28,7 +31,7 @@ export const WebSocketConnectionLive = (name: string, color: M.Color) =>
       );
 
       yield* _(
-        Effect.async<never, M.WebSocketError, void>((emit) => {
+        Effect.async<void, M.WebSocketError>((emit) => {
           ws.on("open", () => {
             emit(Effect.succeed(undefined));
           });
@@ -58,9 +61,8 @@ export const WebSocketConnectionLive = (name: string, color: M.Color) =>
       );
 
       const messagesStream = Stream.async<
-        never,
-        M.UnknownIncomingMessageError | M.WebSocketError,
-        M.ClientIncomingMessage
+        M.ClientIncomingMessage,
+        M.UnknownIncomingMessageError | M.WebSocketError
       >((emit) => {
         ws.on("message", (message) => {
           const messageString = message.toString();

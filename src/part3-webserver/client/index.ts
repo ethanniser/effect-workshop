@@ -8,13 +8,14 @@ import {
   Stream,
   pipe,
 } from "effect";
-import { BunContext, Runtime, Terminal } from "@effect/platform-bun";
+import { BunContext, BunRuntime } from "@effect/platform-bun";
+import { Terminal } from "@effect/platform";
 import { Command, Prompt } from "@effect/cli";
 import { WebSocketConnection, WebSocketConnectionLive } from "./ws";
 import chalk from "chalk";
 import * as M from "./model";
 import * as C from "../shared/config";
-import * as Http from "@effect/platform-node/HttpClient";
+import * as Http from "@effect/platform/HttpClient";
 
 const colorText = (text: string, color: M.Color): string => chalk[color](text);
 
@@ -136,5 +137,5 @@ const main = Effect.suspend(() => run(globalThis.process.argv));
 main.pipe(
   Effect.provide(BunContext.layer),
   Effect.provide(Http.client.layer),
-  Runtime.runMain
+  BunRuntime.runMain
 );

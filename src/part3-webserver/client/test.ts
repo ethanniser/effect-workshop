@@ -1,6 +1,6 @@
-import { NodeContext, Runtime } from "@effect/platform-node";
+import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Console, Effect } from "effect";
-import * as Http from "@effect/platform-node/HttpClient";
+import * as Http from "@effect/platform/HttpClient";
 import * as S from "@effect/schema/Schema";
 
 const Todo = S.struct({
@@ -22,5 +22,5 @@ const main = Effect.gen(function* (_) {
 main.pipe(
   Effect.provide(NodeContext.layer),
   Effect.provide(Http.client.layer),
-  Runtime.runMain
+  NodeRuntime.runMain
 );

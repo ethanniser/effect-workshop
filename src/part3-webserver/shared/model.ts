@@ -97,10 +97,10 @@ export interface WebSocketConnection<Incoming, Outgoing> {
   readonly name: string;
   readonly color: Color;
   readonly timeConnected: number;
-  readonly messages: Stream.Stream<never, never, Incoming>;
+  readonly messages: Stream.Stream<Incoming>;
   readonly send: Queue.Enqueue<Outgoing>;
   readonly sendFiber: Fiber.Fiber<never, void>;
-  readonly close: Effect.Effect<never, never, void>;
+  readonly close: Effect.Effect<void>;
 }
 
 export const AvailableColorsResponse = S.struct({
