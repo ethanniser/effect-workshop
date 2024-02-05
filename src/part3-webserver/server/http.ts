@@ -1,4 +1,5 @@
-import * as Http from "@effect/platform-node/HttpServer";
+import { NodeHttpServer } from "@effect/platform-node";
+import * as Http from "@effect/platform/HttpServer";
 import { Config, Effect, Layer } from "effect";
 import { NodeServer } from "./node";
 import { getAvailableColors } from "./shared";
@@ -10,7 +11,9 @@ export const HTTPServerLive = Layer.scoped(
   Http.server.Server,
   NodeServer.pipe(
     Effect.zip(C.PORT),
-    Effect.flatMap(([server, port]) => Http.server.make(() => server, { port }))
+    Effect.flatMap(([server, port]) =>
+      NodeHttpServer.server.make(() => server, { port })
+    )
   )
 );
 

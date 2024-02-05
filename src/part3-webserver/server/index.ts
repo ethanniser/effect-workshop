@@ -1,6 +1,6 @@
 import * as NodeContext from "@effect/platform-node/NodeContext";
-import * as Http from "@effect/platform-node/HttpServer";
-import { runMain } from "@effect/platform-node/Runtime";
+import * as Http from "@effect/platform/HttpServer";
+import { NodeRuntime } from "@effect/platform-node";
 import { Console, Effect, Layer, LogLevel, Logger } from "effect";
 import { HTTPServerLive, HttpLive } from "./http";
 import { WSSServer, WSSServerLive, WebSocketLive } from "./ws";
@@ -35,4 +35,4 @@ const MainLive = ServersLive.pipe(
   Layer.provide(Logger.minimumLogLevel(LogLevel.Debug))
 );
 
-runMain(Layer.launch(MainLive));
+NodeRuntime.runMain(Layer.launch(MainLive));

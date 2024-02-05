@@ -20,9 +20,11 @@ import WebSocket from "ws";
 import * as M from "./model";
 import { ConnectionStore, getAvailableColors } from "./shared";
 import * as S from "@effect/schema/Schema";
-import { formatError } from "@effect/schema/TreeFormatter";
 
-const MessagePubSub = Context.Tag<M.MessagePubSub>();
+class MessagePubSub extends Context.Tag("MessagePubSub")<
+  MessagePubSub,
+  M.MessagePubSub
+>() {}
 export const MessagePubSubLive = Layer.effect(
   MessagePubSub,
   PubSub.unbounded<M.ServerOutgoingMessage>()
@@ -31,49 +33,46 @@ export const MessagePubSubLive = Layer.effect(
 function registerConnection(ws: WebSocket) {
   return Effect.gen(function* (_) {
     const setupInfo = yield* _(
-      Effect.async<
-        M.ConnectionStore,
-        M.BadStartupMessageError,
-        M.StartupMessage
-      >((emit) => {
-        ws.once("message", (message) => {
-          pipe(
-            message.toString(),
-            S.decodeUnknown(M.StartupMessageFromJSON),
-            Effect.mapError(
-              (parseError) =>
-                new M.BadStartupMessageError({
-                  error: { _tag: "parseError", parseError },
+      Effect.async<M.StartupMessage, M.BadStartupMessageError, ConnectionStore>(
+        (emit) => {
+          ws.once("message", (message) => {
+            pipe(
+              message.toString(),
+              S.decodeUnknown(M.StartupMessageFromJSON),
+              Effect.mapError(
+                (parseError) =>
+                  new M.BadStartupMessageError({
+                    error: { _tag: "parseError", parseError },
+                  })
+              ),
+              Effect.flatMap((message) =>
+                Effect.gen(function* (_) {
+                  const availableColors = yield* _(getAvailableColors);
+                  if (!availableColors.includes(message.color)) {
+                    yield* _(
+                      new M.BadStartupMessageError({
+                        error: {
+                          _tag: "colorAlreadyTaken",
+                          color: message.color,
+                        },
+                      })
+                    );
+                  }
+                  return message;
                 })
-            ),
-            Effect.flatMap((message) =>
-              Effect.gen(function* (_) {
-                const availableColors = yield* _(getAvailableColors);
-                if (!availableColors.includes(message.color)) {
-                  yield* _(
-                    new M.BadStartupMessageError({
-                      error: {
-                        _tag: "colorAlreadyTaken",
-                        color: message.color,
-                      },
-                    })
-                  );
-                }
-                return message;
-              })
-            ),
-            emit
-          );
-        });
-      })
+              ),
+              emit
+            );
+          });
+        }
+      )
     );
 
     yield* _(Effect.logDebug(`New connection from ${setupInfo.name}`));
 
     const messagesStream = Stream.async<
-      never,
-      M.UnknownIncomingMessageError | M.WebSocketError,
-      M.ServerIncomingMessage
+      M.ServerIncomingMessage,
+      M.UnknownIncomingMessageError | M.WebSocketError
     >((emit) => {
       ws.on("message", (message) => {
         const messageString = message.toString();
@@ -222,7 +221,10 @@ function registerConnection(ws: WebSocket) {
   }).pipe(Effect.catchAll((error) => Console.error(error)));
 }
 
-export const WSSServer = Context.Tag<WebSocketServer>();
+export class WSSServer extends Context.Tag("WSSServer")<
+  WSSServer,
+  WebSocketServer
+>() {}
 export const WSSServerLive = Layer.effect(
   WSSServer,
   NodeServer.pipe(Effect.map((server) => new WebSocketServer({ server })))
@@ -231,7 +233,7 @@ export const WSSServerLive = Layer.effect(
 export const WebSocketLive = Layer.effectDiscard(
   Effect.gen(function* (_) {
     const wss = yield* _(WSSServer);
-    const connectionStream = Stream.async<never, never, WebSocket>((emit) => {
+    const connectionStream = Stream.async<WebSocket>((emit) => {
       wss.on("connection", (ws) => {
         emit(Effect.succeed(Chunk.make(ws)));
       });

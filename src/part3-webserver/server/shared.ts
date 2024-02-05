@@ -1,7 +1,10 @@
 import { Context, Effect, HashMap, Layer, Ref } from "effect";
 import * as M from "./model";
 
-export const ConnectionStore = Context.Tag<M.ConnectionStore>();
+export class ConnectionStore extends Context.Tag("ConnectionStore")<
+  ConnectionStore,
+  M.ConnectionStore
+>() {}
 export const ConnectionStoreLive = Layer.effect(
   ConnectionStore,
   Ref.make(HashMap.empty<string, M.ServerWebSocketConnection>())
