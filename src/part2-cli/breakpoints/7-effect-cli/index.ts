@@ -1,8 +1,9 @@
 import { Console, Effect, Function, Layer, Match, Option, pipe } from "effect";
 import * as M from "./model";
 import * as S from "@effect/schema/Schema";
-import { FileSystem, Runtime, BunContext } from "@effect/platform-bun";
-import * as Http from "@effect/platform-bun/HttpClient";
+import { BunRuntime, BunContext } from "@effect/platform-bun";
+import { FileSystem } from "@effect/platform";
+import * as Http from "@effect/platform/HttpClient";
 import { Command, Options, Args } from "@effect/cli";
 
 const main = Effect.gen(function* (_) {
@@ -127,5 +128,5 @@ pipe(
   cli,
   Effect.provide(Http.client.layer),
   Effect.provide(BunContext.layer),
-  Runtime.runMain
+  BunRuntime.runMain
 );

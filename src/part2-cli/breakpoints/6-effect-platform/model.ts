@@ -8,20 +8,17 @@ export class TextDecodeError extends Data.TaggedError("TextDecodeError") {}
 
 export class HeaderParseError extends Data.TaggedError("HeaderParseError") {}
 
-type CLIOptions = {
-  readonly _: unique symbol;
-};
-
-interface CLIOptionsImpl {
-  readonly url: string;
-  readonly method: string;
-  readonly data: Option.Option<string>;
-  readonly headers: readonly (readonly [string, string])[];
-  readonly output: Option.Option<string>;
-  readonly include: Option.Option<boolean>;
-}
-
-export const CLIOptions = Context.Tag<CLIOptions, CLIOptionsImpl>("CLIOptions");
+export class CLIOptions extends Context.Tag("CLIOptions")<
+  CLIOptions,
+  {
+    readonly url: string;
+    readonly method: string;
+    readonly data: Option.Option<string>;
+    readonly headers: readonly (readonly [string, string])[];
+    readonly output: Option.Option<string>;
+    readonly include: Option.Option<boolean>;
+  }
+>() {}
 
 export class CliOptionsParseError extends Data.TaggedError(
   "CliOptionsParseError"
