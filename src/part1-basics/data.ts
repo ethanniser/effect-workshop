@@ -5,7 +5,7 @@ type FooData = {
   readonly b: string;
 };
 
-class Foo implements Data.Data<FooData> {
+class Foo implements FooData, Equal.Equal, Hash.Hash {
   constructor(readonly a: number, readonly b: string) {}
 
   [Equal.symbol](that: Equal.Equal): boolean {
@@ -21,12 +21,12 @@ class Foo implements Data.Data<FooData> {
   }
 }
 
-const f1: Data.Data<FooData> = new Foo(1, "a");
-const f2: Data.Data<FooData> = Data.struct({ a: 1, b: "a" });
-const f21: Data.Data<readonly [number, string]> = Data.tuple(1, "a");
-const f22: Data.Data<Array<number>> = Data.array([1, 2, 3]);
+const f1 = new Foo(1, "a");
+const f2 = Data.struct({ a: 1, b: "a" });
+const f21 = Data.tuple(1, "a");
+const f22 = Data.array([1, 2, 3]);
 
-interface Foo3 extends Data.Case {
+interface Foo3 {
   readonly a: number;
   readonly b: string;
 }
@@ -34,7 +34,7 @@ interface Foo3 extends Data.Case {
 const Foo3 = Data.case<Foo3>();
 const f3 = Foo3({ a: 1, b: "a" });
 
-interface TaggedFoo3 extends Data.Case {
+interface TaggedFoo3 {
   readonly _tag: "Foo3";
   readonly a: number;
   readonly b: string;

@@ -28,20 +28,20 @@ function Outer(): number | Error {
 
 // effects are different
 
-type Effect<_, Error, Value> = /* unimportant */ undefined;
+type Effect<Value, Error> = /* unimportant */ undefined;
 
-declare const inner: Effect.Effect<never, Error, "baz" | "bar">;
+declare const inner: Effect.Effect<"baz" | "bar", Error>;
 
-// outer: Effect<never, Error, number>
+// outer: Effect<number, Error>
 const outer = Effect.gen(function* (_) {
   // result: "baz" | "bar"
   const result = yield* _(inner);
   return result.length;
 });
 
-declare const inner2: Effect.Effect<never, 0 | 1, number>;
+declare const inner2: Effect.Effect<number, 0 | 1>;
 
-// outer: Effect<never, Error | 0 | 1, number>
+// outer: Effect<numbernever, Error | 0 | 1>
 const outer2 = Effect.gen(function* (_) {
   // result: "baz" | "bar"
   const result = yield* _(inner);
@@ -49,12 +49,12 @@ const outer2 = Effect.gen(function* (_) {
   return result.length + result2;
 });
 
-// outer: Effect<never, Error | 0 | 1, number>
+// outer: Effect<number, Error | 0 | 1>
 const outer3 = Effect.gen(function* (_) {
   // result: "baz" | "bar"
   const result = yield* _(inner);
   const result2 = yield* _(inner2);
   return result.length + result2;
 });
-// noErrors: Effect<never, never, number>
+// noErrors: Effect<number, never> or Effect<number>
 const noErrors = Effect.catchAll(outer, (e) => Effect.succeed(-1));
