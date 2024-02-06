@@ -4,7 +4,7 @@ title: Effect Beginner/Intermediate Workshop
 author: Ethan Niser
 lineNumbers: false
 record: false
-highlighter: shikiji
+highlighter: shiki
 drawings:
   persist: false
 info: |
@@ -375,3 +375,20 @@ console.log(Effect.runSync(effectFoo)); // 1707076796922
 ---
 
 # Creating `Effect`s
+
+<br>
+
+<v-click>
+
+async, asyncEffect, asyncEither, asyncOption, die, dieMessage, dieSync, fail, failCause, failCauseSync, failSync, gen, never, none, promise, succeed, succeedNone, succeedSome, suspend, sync, unit, withClockScoped, withConsoleScoped, yieldNow
+
+</v-click>
+
+<v-click>
+
+- `succeed` / `fail` for values
+- `sync` / `try` for sync functions
+- `promise` / `tryPromise` for async functions
+- `async` for async callbacks
+
+</v-click>

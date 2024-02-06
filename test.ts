@@ -1,21 +1,12 @@
-import { Data, Hash, Equal, HashMap } from "effect";
+import { Console, Effect, pipe } from "effect";
 
-class Foo {
-  constructor(readonly a: number) {}
-  [Hash.symbol]() {
-    return 0;
-  }
-  [Equal.symbol](that: Equal.Equal) {
-    return false;
-  }
-}
+const f1 = (): Promise<string> => {
+  throw new Error("thrown");
+};
 
-let x = new Foo(1);
+const f2 = (): Promise<string> => Promise.reject(new Error("rejected"));
 
-let hm = HashMap.empty<Foo, string>();
-hm = HashMap.set(hm, new Foo(1), "one");
-console.log(HashMap.toEntries(hm));
-hm = HashMap.set(hm, new Foo(2), "two");
-console.log(HashMap.toEntries(hm));
-hm = HashMap.set(hm, new Foo(2), "three");
-console.log(HashMap.toEntries(hm));
+// await Effect.runPromise(Effect.tryPromise(f1));
+
+const message = await Effect.runPromiseExit(Effect.tryPromise(f2));
+console.log(message);
