@@ -249,54 +249,15 @@ function Outer(): number | Error {
 <br><br>
 
 ```ts
-type Effect<_, Error, Value> = /* unimportant */;
+type Effect<Value, Error = never> = /* unimportant */;
 ```
 
----
-
 ```ts
-declare const Inner: Effect<never, Error, "baz" | "bar">;
-
-// outer: Effect<never, Error, number>
-const outer = Effect.gen(function* (_) {
-  // result: "baz" | "bar"
-  const result = yield* _(Inner);
-  return result.length;
-});
+declare const foo: Effect<number, never>; // also the same as Effect<number>
 ```
 
----
-
 ```ts
-declare const Inner1: Effect<never, Error, "baz" | "bar">;
-declare const Inner2: Effect<never, 0 | 1, number>;
-
-// outer: Effect<never, Error | 0 | 1, number>
-const outer = Effect.gen(function* (_) {
-  // result: "baz" | "bar"
-  const result = yield* _(Inner);
-  const result2 = yield* _(Inner2);
-  return result.length + result2;
-});
-```
-
----
-
-<!-- prettier-ignore -->
-```ts
-declare const Inner1: Effect<never, Error, "baz" | "bar">;
-declare const Inner2: Effect<never, 0 | 1, number>;
-
-// outer: Effect<never, Error | 0 | 1, number>
-const outer = Effect.gen(function* (_) {
-  // result: "baz" | "bar"
-  const result = yield* _(Inner);
-  const result2 = yield* _(Inner2);
-  return result.length + result2;
-});
-// noErrors: Effect<never, never, number>
-const noErrors = 
-  Effect.catchAll(outer, (e) => Effect.succeed(-1));
+declare const bar: Effect<number, Error>;
 ```
 
 ---
@@ -336,28 +297,30 @@ function updateEmail(
 ---
 
 ```ts
-type Effect<Requirements, Error, Value>
+type Effect<Value, Error = never, Requirement = never>
 ```
 
 ```ts
-declare const getUser: Effect<DataBase, NotFoundError, User>;
+declare const getUser: Effect<User, NotFoundError, DataBase>;
 ```
 
 ```ts
 declare const updateEmail: Effect<
-  DataBase | Logger | Telemetry,
+  User,
   NotFoundError,
-  User
+  DataBase | Logger | Telemetry
 >;
 ```
 
 ```ts
-const main: Effect<Telemetry, NotFoundError, User> = pipe(
+const main: Effect<User, NotFoundError, Telemetry> = pipe(
   updateEmail,
   Effect.provideService(DataBase, mockDb),
   Effect.provideService(Logger, logger)
 );
 ```
+
+- Effect ensures on a type level that the `Requirements` parameter is `never` before Effects are executed
 
 ---
 
@@ -370,7 +333,7 @@ declare async function getUser(id: number): Promise<User>;
 <!-- prettier-ignore -->
 ```ts
 declare function getUser(id: number): 
-  Effect<UserRepo, NotFoundError, User>;
+  Effect<User, NotFoundError, UserRepo>;
 ```
 
 <!-- when you call this function what happens, what about this function? -->
