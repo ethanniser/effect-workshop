@@ -252,13 +252,20 @@ function Outer(): number | Error {
 type Effect<Value, Error = never> = /* unimportant */;
 ```
 
+<br>
+
 ```ts
-declare const foo: Effect<number, never>; // also the same as Effect<number>
+declare const foo: Effect<number, never>;
+// also the same as Effect<number>
 ```
+
+<br>
 
 ```ts
 declare const bar: Effect<number, Error>;
 ```
+
+<!-- we come back to this later, but all those composition problems I just talked about are elegantly solved by effect just trust me for a bit -->
 
 ---
 
@@ -286,7 +293,7 @@ function updateEmail(
   id: number,
   newEmail: string
 ): User {
-  const user = getUser(db, id);
+  const user = db.users.getById(id);
   db.users.updateEmail(id, newEmail);
   logger.info(`Updated email for user ${id}`);
   telemetry.record("email-updated", { id });
@@ -312,15 +319,13 @@ declare const updateEmail: Effect<
 >;
 ```
 
+<!-- prettier-ignore -->
 ```ts
-const main: Effect<User, NotFoundError, Telemetry> = pipe(
-  updateEmail,
-  Effect.provideService(DataBase, mockDb),
-  Effect.provideService(Logger, logger)
-);
+const runnable: Effect<User, NotFoundError, never> = 
+  provideDependencies(getUser, db);
+const testable: Effect<User, NotFoundError, never> = 
+  provideDependencies(getUser, mockDb);
 ```
-
-- Effect ensures on a type level that the `Requirements` parameter is `never` before Effects are executed
 
 ---
 
@@ -366,3 +371,7 @@ console.log(effectFoo);
 ```ts
 console.log(Effect.runSync(effectFoo)); // 1707076796922
 ```
+
+---
+
+# Creating `Effect`s
