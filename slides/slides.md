@@ -392,3 +392,67 @@ async, asyncEffect, asyncEither, asyncOption, die, dieMessage, dieSync, fail, fa
 - `async` for async callbacks
 
 </v-click>
+
+---
+
+# Running `Effect`s
+
+### Well we have some effects now, but they don't do anything...
+
+<br>
+
+<v-clicks>
+
+- `runSync` for synchronous effects
+- `runPromise` for asynchronous effects
+- `runSyncExit` / `runPromiseExit` for geting the error as a value, instead of thrown
+
+</v-clicks>
+
+<!-- how do we pull or 'extract' the value out? -->
+
+---
+
+# Building up programs
+
+- So far our programs are quite limited
+
+```ts
+const getDate = () => Date.now();
+const double = (x) => x * 2;
+
+const doubleDate = () => {
+  const date = getDate();
+  return double(date);
+};
+```
+
+ <!-- can only create simple effects, can only run them to get values
+  with functions we can compose them like this
+ how do we do this in effect
+  -->
+
+---
+
+```ts
+const getDate = Effect.sync(() => Date.now());
+const double = (x) => x * 2;
+```
+
+```ts
+const doubleDate = Effect.sync(() => {
+  const date = Effect.runSync(getDate);
+  return double(date);
+});
+```
+
+<!--
+Well I can tell you for sure the answer is not this
+PLEASE DONT DO THIS, why...
+-->
+
+---
+
+# Combinators!
+
+- `map` takes a function, and returns an effect that applies that function to the result of the previous effect
