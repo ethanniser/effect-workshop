@@ -255,6 +255,21 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
   // anything you can do with normal functions, you can do with generators, and the other way around
   // but most of the time generators are more comforable to work with
   // and allow for code that looks similar to the async / await syntax everyone is used to
+
+  // you might wonder why `yield*` and the `_()` is used instead of just `yield`
+  // it comes down to a limitation of typescript, in order to get the right type inference
+  // the so called 'adapter' is required, most people alias it to `_` but `$` was used in the past
+  // a benefit of this is that the adapter is also a pipe function
+
+  const gen = Effect.gen(function* (_) {
+    const x = yield* _(
+      Effect.succeed(5),
+      Effect.map((x) => x * 2),
+      Effect.map((x) => x.toString())
+    );
+    const y = yield* _(Effect.succeed(10));
+    return x + y;
+  });
 }
 
 // lastly, we are going to look at the `pipe` method, which is available on most types in effect
