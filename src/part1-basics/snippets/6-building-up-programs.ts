@@ -132,3 +132,60 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
   // and the result, `ls | grep .ts` itself is a program that
   // represents the entire sequence of operations
 }
+
+{
+  const program = pipe(
+    Effect.sync(() => Date.now()),
+    Effect.map((x) => x * 2),
+    Effect.map((x) => x.toString()),
+    Effect.map((x) => x.toUpperCase())
+  );
+
+  // lets take a look at this program again
+  // if we wanted to log the result of some step, how would we do that?
+
+  const program2 = pipe(
+    Effect.sync(() => Date.now()),
+    Effect.map((x) => x * 2),
+    Effect.map((x) => {
+      console.log(x);
+      return x;
+    }),
+    Effect.map((x) => x.toString()),
+    Effect.map((x) => x.toUpperCase())
+  );
+
+  // we have to return the value, so that it can be passed to the next step
+  // but this is not ideal, because we are not actually transforming the value
+  // so the next combinator we will look at is `Effect.tap`
+  // its basically `Effect.map` but the value of the resulting effect is not transformed
+
+  const program3 = pipe(
+    Effect.sync(() => Date.now()),
+    Effect.map((x) => x * 2),
+    Effect.tap((x) => console.log(x)),
+    // even though ^^ returns void, the value is still passed to the next step
+    Effect.map((x) => x.toString()),
+    Effect.map((x) => x.toUpperCase())
+  );
+
+  // finally we have `Effect.all`
+  // it takes an array of effects and returns an effect of an array of their results
+
+  const getDate = Effect.sync(() => Date.now());
+  const yesterday = Effect.sync(() => Date.now() - 24 * 60 * 60 * 1000);
+  const program4 = pipe(
+    Effect.all([getDate, yesterday]),
+    Effect.map(([x, y]) => x + y)
+  );
+
+  // something cool about `Effect.all` is that you can also pass an object where the values are effects
+  // and it will return an effect of an object of their results
+  const program5 = pipe(
+    Effect.all({ x: getDate, y: yesterday }),
+    Effect.map(({ x, y }) => x + y)
+  );
+}
+
+// finally, we are going to look at Effect generators
+// they are an alternate way to build up and compose effects
