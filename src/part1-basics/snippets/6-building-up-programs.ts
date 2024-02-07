@@ -189,3 +189,84 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
 
 // finally, we are going to look at Effect generators
 // they are an alternate way to build up and compose effects
+{
+  //to start take a loop our program from before (with some modifications) again
+  const divide = (a: number, b: number): Effect.Effect<number, Error> =>
+    b === 0
+      ? Effect.fail(new Error("Cannot divide by zero"))
+      : Effect.succeed(a / b);
+
+  const program = pipe(
+    Effect.sync(() => Date.now()),
+    Effect.map((x) => x * 2),
+    Effect.flatMap((x) => divide(x, 3)),
+    Effect.map((x) => x.toString())
+  );
+
+  // does this look familiar?
+  // it looks like a promise chain, right?
+  const promise = Promise.resolve(Date.now())
+    .then((x) => x * 2)
+    .then(
+      (x) =>
+        new Promise<number>((res, rej) =>
+          x === 0 ? rej("Cannot divide by zero") : res(x / 3)
+        )
+    )
+    .then((x) => x.toString());
+
+  // its because they are very similar
+  // they both utilize the same concept of having a wrapper around a value,
+  // and then applying transformations to it in the form of a chain of functions
+
+  // so thats were async / await comes in
+  // it allows us to write a chain of transformations, in a way that looks synchronous
+  async function program2() {
+    const x = await Promise.resolve(Date.now());
+    const y = x * 2;
+    const z = await new Promise<number>((res, rej) =>
+      y === 0 ? rej("Cannot divide by zero") : res(y / 3)
+    );
+    return z.toString();
+  }
+
+  // this is much easier to read and write, and allows for if statements and loops
+
+  // effect has its own version of async / await that works the exact same way using javascript generators
+  const before = pipe(
+    Effect.sync(() => Date.now()),
+    Effect.map((x) => x * 2),
+    Effect.flatMap((x) => divide(x, 3)),
+    Effect.map((x) => x.toString())
+  );
+  // after: Effect<string, Error>
+  const after = Effect.gen(function* (_) {
+    // x is a number!, 'yield' is like 'await'
+    const x = yield* _(Effect.sync(() => Date.now()));
+    const y = x * 2;
+    const z = yield* _(divide(y, 3));
+    // notice how errors propagate automatically to the return type
+    return z.toString();
+  });
+
+  // this works through the exact same concept of seperating our program into a series of 'continuations'
+  // and then chaining them together
+
+  // anything you can do with normal functions, you can do with generators, and the other way around
+  // but most of the time generators are more comforable to work with
+  // and allow for code that looks similar to the async / await syntax everyone is used to
+}
+
+// lastly, we are going to look at the `pipe` method, which is available on most types in effect
+// it is simply a shorthand for the `pipe` function, with the first argument already filled in
+
+const before = pipe(
+  Effect.succeed(5),
+  Effect.map((x) => x * 2),
+  Effect.map((x) => x.toString())
+);
+
+const after = Effect.succeed(5).pipe(
+  Effect.map((x) => x * 2),
+  Effect.map((x) => x.toString())
+);
