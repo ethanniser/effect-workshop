@@ -1,4 +1,4 @@
-import { Effect, Context, Console } from "effect";
+import { Effect, Context, Console, Layer, pipe } from "effect";
 
 // An Effect's third type parameter reperesents the 'services' it requires before it can be run
 // Only an Effect that requires no services (i.e. `Effect<_, _, never>`) can be run
@@ -38,15 +38,18 @@ const program = Effect.gen(function* (_) {
 // Effect.runSync(program);
 
 // to resolve the dependency, we need to provide the service
+// the name "_Live" is commonly used to describe the 'live' implementation of a service
+// i.e. the actual implementation of the service that is used at runtime
+// also common is "_Test" to describe a test implementation of a service
 
-const randomImpl: RandomImpl = {
+const RandomLive: RandomImpl = {
   next: Effect.sync(() => Math.random()),
   nextIntBetween: (min, max) =>
     Effect.sync(() => Math.floor(Math.random() * (max - min + 1) + min)),
 };
 
 // runnable: Effect<'low' | 'high', never, never>
-const runnable = program.pipe(Effect.provideService(Random, randomImpl));
+const runnable = program.pipe(Effect.provideService(Random, RandomLive));
 
 // now we can run the effect
 console.log(Effect.runSync(runnable));
@@ -54,3 +57,70 @@ console.log(Effect.runSync(runnable));
 // However, not all services are so simple
 // Some may require other services to be provided, or their construction may be effectful (or error)
 // In these cases effect has the `Layer<ROut, E, RIn>` type to help us manage these dependencies
+
+class FeatureFlags extends Context.Tag("FeatureFlag")<
+  FeatureFlags,
+  {
+    readonly isEnabled: (flag: string) => Effect.Effect<boolean>;
+  }
+>() {}
+
+class ConfigFile extends Context.Tag("ConfigFile")<
+  ConfigFile,
+  {
+    readonly contents: Record<string, boolean>;
+  }
+>() {}
+
+// to create a layer from an effect, we use the `Layer.effect` function
+// think of this like the opposite of `flatMap`
+// instead of running after an effect, this effect is run prior to the effect
+// notice how we can use other tags just like normal, but they appear in the RIn type parameter
+
+// FeatureFlagsLive: Layer<FeatureFlags, never, ConfigFile>
+const FeatureFlagsLive = Layer.effect(
+  FeatureFlags,
+  pipe(
+    ConfigFile,
+    Effect.map((config) => ({
+      isEnabled: (flag: string) =>
+        Effect.sync(() => config.contents[flag] ?? false),
+    }))
+  )
+);
+
+// ConfigFileLive: Layer<ConfigFile, Error>
+const ConfigFileLive = Layer.effect(
+  ConfigFile,
+  Effect.gen(function* (_) {
+    const contents = yield* _(
+      Effect.tryPromise({
+        try: () => Bun.file("config.json").text(),
+        catch: (e) => new Error("Could not read config file"),
+      })
+    );
+    const parsed = yield* _(
+      Effect.try({
+        try: () => JSON.parse(contents),
+        catch: (e) => new Error("Could not parse config file"),
+      })
+    );
+
+    return {
+      contents: parsed,
+    };
+  })
+);
+
+declare const main: Effect.Effect<string, never, FeatureFlags>;
+
+// we can provide layers to an effect using the `Effect.provide` function
+// notice how this errors because we havent provided the ConfigFile layer to the FeatureFlags layer
+// const runnable2 = main.pipe(Effect.provide(FeatureFlags, FeatureFlagsLive));
+
+// finalLayer: Layer<FeatureFlags, Error, never>
+const finalLayer = Layer.provide(FeatureFlagsLive, ConfigFileLive);
+
+// now we can provide to main and run it
+
+pipe(main, Effect.provide(finalLayer), Effect.runPromise);
