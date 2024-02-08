@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Console, Effect } from "effect";
 
 // so far our programs are quite limited
 // we can only create very basic effects
@@ -285,3 +285,30 @@ const after = Effect.succeed(5).pipe(
   Effect.map((x) => x * 2),
   Effect.map((x) => x.toString())
 );
+
+// side note on zipRight vs FlatMap
+
+// There is also `Effect.zip`, which is basically `Effect.all` but for only two effects
+const zipped = Effect.zip(Effect.succeed("hi"), Effect.succeed(10));
+// and `Effect.zipLeft`, which is like `Effect.flatMap` but only returns the result of the second effect
+const zippedLeft = Effect.zipLeft(Effect.succeed("hi"), Effect.succeed(10));
+// and `Effect.zipRight`, which is like `Effect.flatMap` but only returns the result of the first effect
+const zippedRight = Effect.zipRight(Effect.succeed("hi"), Effect.succeed(10));
+
+// sometimes it can be confusing when to use `Effect.zipRight` vs `Effect.flatMap`
+// but the difference is whether the second effect depends on the result of the first
+// if it does, use `Effect.flatMap`, if it doesn't, use `Effect.zipRight`
+// you can of course use `Effect.flatMap` with a function that ignores the input
+
+const one = Effect.flatMap(Effect.succeed(5), (x) => Console.log(x));
+const two = Effect.flatMap(Effect.succeed(5), () => Console.log("hi"));
+const three = Effect.zipRight(Effect.succeed(5), Console.log("hi"));
+
+// but its more explicit to use `Effect.zipRight` in that case
+// `flatMap` says, "do this with the result of the first effect"
+// `zipRight` says, "just do this after the first effect"
+
+// same with `zipLeft` and `tap`
+const four = Effect.tap(Effect.succeed(5), (x) => Console.log(x));
+const five = Effect.tap(Effect.succeed(5), () => Console.log("hi"));
+const six = Effect.zipLeft(Effect.succeed(5), Console.log("hi"));
