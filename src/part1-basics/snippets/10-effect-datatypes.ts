@@ -113,7 +113,7 @@ declare function doLogicThatMightFail2(): Effect.Effect<string, Error>;
 // Option and Either are convieniently both subtypes of Effect, meaning they can be used interchangeably in any Effect context
 
 // Option<T> -> Effect<T, NoSuchElementException>
-// Either<L, R> -> Effect<L, R>
+// Either<E, A> -> Effect<A, E>
 
 const result = pipe(
   Option.some(5),

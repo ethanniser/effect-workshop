@@ -23,7 +23,7 @@ Effect.runSync(one);
 
 // Working with scopes manually like this is very uncommon though
 // Effect has many higher level abstractions for managing resources
-// For scoped that only have a 'release' phase, we can use `addFinalizer`
+// For resources that only have a 'release' phase, we can use `addFinalizer`
 
 const two = Effect.gen(function* (_) {
   yield* _(Effect.addFinalizer(() => Console.log("Last!")));
@@ -37,10 +37,7 @@ const two = Effect.gen(function* (_) {
 // when we 'provide' a scope service, we are defining the lifetime of the scope
 // the most common way to do this is with `Effect.scoped`
 
-const three = Effect.gen(function* (_) {
-  yield* _(Effect.addFinalizer(() => Console.log("Last!")));
-  yield* _(Console.log("First"));
-}).pipe(Effect.scoped);
+const three = Effect.scoped(two);
 
 Effect.runSync(three);
 

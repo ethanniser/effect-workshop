@@ -60,14 +60,14 @@ const handled1 = errors.pipe(Effect.catchAll((e) => Effect.succeed("Handled")));
 
 // notice how the `BarError` is still present in the error type, as we have not handled it
 const handled2 = errors.pipe(
-  Effect.catchTag("FooError", () => Effect.succeed("Handled Foo"))
+  Effect.catchTag("FooError", (e) => Effect.succeed("Handled Foo"))
 );
 
 // to handle multiple tagged errors at the same time we can use `catchTag`
 const handled3 = errors.pipe(
   Effect.catchTags({
-    FooError: () => Effect.succeed("Handled Foo"),
-    BarError: () => Effect.succeed("Handled Bar"),
+    FooError: (e) => Effect.succeed("Handled Foo"),
+    BarError: (e) => Effect.succeed("Handled Bar"),
   })
 );
 
@@ -127,7 +127,7 @@ const handledGen1 = Effect.gen(function* (_) {
     yield* _(Effect.fail(new Error("fail")));
   }
   return r * 2;
-}).pipe(Effect.catchAll(() => Effect.succeed(-1)));
+}).pipe(Effect.catchAll((e) => Effect.succeed(-1)));
 
 // another option is doing error handling in the adapter pipe
 const mightFail = Effect.sync(() => Math.random()).pipe(

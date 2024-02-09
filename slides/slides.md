@@ -341,9 +341,14 @@ const testable: Effect<User, NotFoundError, never> =
 
 # Sync vs Async
 
+<br>
+
 ```ts
 declare async function getUser(id: number): Promise<User>;
 ```
+
+<br>
+<br>
 
 <!-- prettier-ignore -->
 ```ts
@@ -369,6 +374,10 @@ console.log(foo); // [Function: foo]
 console.log(foo()); // 1707076796922
 ```
 
+<br>
+
+<v-click>
+
 ```ts
 const effectFoo = Effect.sync(() => Date.now());
 ```
@@ -381,6 +390,8 @@ console.log(effectFoo);
 ```ts
 console.log(Effect.runSync(effectFoo)); // 1707076796922
 ```
+
+</v-click>
 
 ---
 
@@ -411,13 +422,13 @@ async, asyncEffect, asyncEither, asyncOption, die, dieMessage, dieSync, fail, fa
 
 <br>
 
-<v-clicks>
+<v-click>
 
 - `runSync` for synchronous effects
 - `runPromise` for asynchronous effects
 - `runSyncExit` / `runPromiseExit` for geting the error as a value, instead of thrown
 
-</v-clicks>
+</v-click>
 
 <!-- how do we pull or 'extract' the value out? -->
 
@@ -456,6 +467,15 @@ const doubleDate = Effect.sync(() => {
 });
 ```
 
+<br>
+<br>
+
+<v-click>
+
+## Run `Effect`s at the **EDGES** of your program
+
+</v-click>
+
 <!--
 Well I can tell you for sure the answer is not this
 PLEASE DONT DO THIS, why...
@@ -465,4 +485,49 @@ PLEASE DONT DO THIS, why...
 
 # Combinators!
 
-- `map` takes a function, and returns an effect that applies that function to the result of the previous effect
+- `map`: Transform the value of an effect
+- `flatMap`: Transform the value of an effect into another effect
+- `tap`: Perform a side effect without changing the value
+- `all`: Merge multiple effects into a single effect
+
+---
+
+# Error handling
+
+- `catchAll`: Recover from all errors
+- `catchTag`: Recover from a specific error
+- `mapError`: Transform the error of an effect
+- `match`: Handle both cases
+- `either`: Move the error into the success channel
+
+---
+
+# Context Management
+
+- "Services" are functionality whos type signature is seperate from the implementation
+- `Context.Tag` created a placehold for a service that can be used in an effect as if it were the real thing
+- `provideService(Tag, implementation)` provides the service to the effect
+- `Layer`s are programs that create services and run before effects that require them
+- `provide(Tag, layer)` provides the layer to the effect
+
+---
+
+# Resource Management
+
+- A `Scope` contains 'finalizers' that are run when the scope is closed
+- When an Effect requires a `Scope` service it means: "I have some resources that need to be cleaned up at some point"
+- Providing the `Scope` indicates where the scope should be closed
+- `acquireRelease`: a helper for created scoped resources
+
+---
+
+# Effect Datatypes
+
+- `Option<T>`: A value that may or may not exist
+- `Either<E, A>`: A disjointed union of two types
+- `Exit<E, A>`: Essentially a `Either<A, Cause<E>>`
+- `Cause<E>`: The result of a computation
+- `Duration`: A time interval
+- `Chunk<T>`: An immutable, functional array
+- `HashSet<T> / HashMap<K, V>`: Immutable, functional collections that support custom hashing and equality with `Equal` and `Hash`
+- `Data`: A module for auto-implementing `Equal` and `Hash` for data

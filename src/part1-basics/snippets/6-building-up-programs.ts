@@ -77,6 +77,7 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
   // to perform this transformation we can use `Effect.map`
 
   const doubleDate3 = Effect.map(getDate, (x) => double(x));
+  const _ = Effect.map((x: number) => double(x));
 
   // doubleDate3 is a new effect that is a program that represents:
   // 1. get the date
@@ -190,7 +191,7 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
 // finally, we are going to look at Effect generators
 // they are an alternate way to build up and compose effects
 {
-  //to start take a loop our program from before (with some modifications) again
+  //to start take a look our program from before (with some modifications) again
   const divide = (a: number, b: number): Effect.Effect<number, Error> =>
     b === 0
       ? Effect.fail(new Error("Cannot divide by zero"))
@@ -205,7 +206,7 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
 
   // does this look familiar?
   // it looks like a promise chain, right?
-  const promise = Promise.resolve(Date.now())
+  const promise = new Promise<number>((res) => res(Date.now()))
     .then((x) => x * 2)
     .then(
       (x) =>
@@ -290,9 +291,9 @@ const after = Effect.succeed(5).pipe(
 
 // There is also `Effect.zip`, which is basically `Effect.all` but for only two effects
 const zipped = Effect.zip(Effect.succeed("hi"), Effect.succeed(10));
-// and `Effect.zipLeft`, which is like `Effect.flatMap` but only returns the result of the second effect
+// and `Effect.zipLeft`, which is like `Effect.flatMap` but the result of the second effect is ignored
 const zippedLeft = Effect.zipLeft(Effect.succeed("hi"), Effect.succeed(10));
-// and `Effect.zipRight`, which is like `Effect.flatMap` but only returns the result of the first effect
+// and `Effect.zipRight`, which is like `Effect.flatMap` but the result of the first effect is ignored
 const zippedRight = Effect.zipRight(Effect.succeed("hi"), Effect.succeed(10));
 
 // sometimes it can be confusing when to use `Effect.zipRight` vs `Effect.flatMap`
