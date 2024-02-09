@@ -124,3 +124,23 @@ const finalLayer = Layer.provide(FeatureFlagsLive, ConfigFileLive);
 // now we can provide to main and run it
 
 pipe(main, Effect.provide(finalLayer), Effect.runPromise);
+
+// final note, something convient you can do with classes is define a static property with a layer implementation
+
+class Foo extends Context.Tag("Foo")<Foo, { readonly foo: string }>() {
+  static live = Layer.effect(
+    Foo,
+    Effect.succeed({
+      foo: "foo",
+    })
+  );
+}
+
+{
+  const program = Effect.gen(function* (_) {
+    const foo = yield* _(Foo);
+    return foo.foo;
+  });
+
+  const runnable = program.pipe(Effect.provide(Foo.live));
+}
