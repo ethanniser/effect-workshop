@@ -71,7 +71,7 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
   // where effect must interact with the outside world
 
   // what about
-  const doubleDate2 = pipe(getDate, double);
+  // const doubleDate2 = pipe(getDate, double);
 
   // but this is not quite right, because double is not a function that takes an effect
   // to perform this transformation we can use `Effect.map`

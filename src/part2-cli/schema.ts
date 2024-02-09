@@ -14,7 +14,10 @@ const StringPairsFromStrings = S.array(S.string).pipe(
 
 export const HashMapFromStrings = S.compose(
   StringPairsFromStrings,
-  S.hashMap(S.string, S.string)
+  S.hashMap({
+    key: S.string,
+    value: S.string,
+  })
 );
 
 export const DurationFromString = S.transformOrFail(

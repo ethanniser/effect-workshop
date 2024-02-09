@@ -277,11 +277,17 @@ function getUser(id: number): User {
 }
 ```
 
+<br>
+
+<v-click>
+
 ```ts
 function getUser(db: DataBase, id: number): User {
   return db.users.getById(id);
 }
 ```
+
+</v-click>
 
 ---
 
@@ -307,6 +313,8 @@ function updateEmail(
 type Effect<Value, Error = never, Requirement = never>
 ```
 
+<v-clicks>
+
 ```ts
 declare const getUser: Effect<User, NotFoundError, DataBase>;
 ```
@@ -326,6 +334,8 @@ const runnable: Effect<User, NotFoundError, never> =
 const testable: Effect<User, NotFoundError, never> = 
   provideDependencies(getUser, mockDb);
 ```
+
+</v-clicks>
 
 ---
 

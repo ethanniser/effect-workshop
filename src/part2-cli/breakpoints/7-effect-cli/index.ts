@@ -91,6 +91,7 @@ const headersOption = Options.text("header").pipe(
   Options.withAlias("H"),
   Options.withDescription("The headers to send with the request"),
   Options.repeated,
+  Options.map((_) => _ as ReadonlyArray<string>),
   Options.withSchema(StringPairsFromStrings)
 );
 

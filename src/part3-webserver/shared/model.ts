@@ -99,7 +99,7 @@ export interface WebSocketConnection<Incoming, Outgoing> {
   readonly timeConnected: number;
   readonly messages: Stream.Stream<Incoming>;
   readonly send: Queue.Enqueue<Outgoing>;
-  readonly sendFiber: Fiber.Fiber<never, void>;
+  readonly sendFiber: Fiber.Fiber<void, never>;
   readonly close: Effect.Effect<void>;
 }
 
