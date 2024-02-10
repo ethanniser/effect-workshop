@@ -31,10 +31,10 @@ const effect = Effect.gen(function* (_) {
   while (true) {
     yield* _(Effect.sync(() => i++));
   }
-  //   yield* _(
-  //     Effect.sync(() => i++),
-  //     Effect.forever
-  //   );
+  // yield* _(
+  //   Effect.sync(() => i++),
+  //   Effect.forever
+  // );
 
   // ^^ this has slightly different results than the while loop, why?
 });
@@ -57,4 +57,4 @@ const withRef = Effect.gen(function* (_) {
   );
 });
 
-// run();
+run();
