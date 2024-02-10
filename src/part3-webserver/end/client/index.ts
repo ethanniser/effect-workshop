@@ -38,7 +38,7 @@ const getAvailableColors = Effect.gen(function* (_) {
   const request = Http.request.get(`http://${HOST}:${PORT}/colors`);
   const response = yield* _(fetch(request));
   const colors = yield* _(
-    Http.response.schemaBodyJson(M.AvailableColorsResponseFromJSON)(response)
+    Http.response.schemaBodyJson(M.AvailableColorsResponse)(response)
   );
   return colors.colors;
 });

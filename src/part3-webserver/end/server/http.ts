@@ -4,7 +4,7 @@ import { Config, Effect, Layer } from "effect";
 import { NodeServer } from "./node";
 import { getAvailableColors } from "./shared";
 import { Schema } from "@effect/schema";
-import { AvailableColorsResponseFromJSON } from "./model";
+import { AvailableColorsResponse } from "./model";
 import * as C from "../shared/config";
 
 export const HTTPServerLive = Layer.scoped(
@@ -23,7 +23,7 @@ export const HttpLive = Http.router.empty.pipe(
     Effect.gen(function* (_) {
       const availableColors = yield* _(getAvailableColors);
       return yield* _(
-        Http.response.schemaJson(AvailableColorsResponseFromJSON)({
+        Http.response.schemaJson(AvailableColorsResponse)({
           _tag: "availableColors",
           colors: availableColors,
         })

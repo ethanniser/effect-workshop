@@ -23,12 +23,7 @@ export {
   UnknownIncomingMessageError,
 };
 
-export {
-  colors,
-  Color,
-  AvailableColorsResponse,
-  AvailableColorsResponseFromJSON,
-} from "../shared/model";
+export { colors, Color, AvailableColorsResponse } from "../shared/model";
 
 export interface ClientWebSocketConnection
   extends WebSocketConnection<ClientIncomingMessage, ClientOutgoingMessage> {}
