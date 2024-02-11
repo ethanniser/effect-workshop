@@ -40,6 +40,7 @@ const effect = Effect.gen(function* (_) {
 // hmmm a little bit different
 
 // Effect's concurrency model is based on fibers (also known as green threads or coroutines)
+// Fibers are extremely lightweight, and can be spawned in the thousands without issue
 // Where effects are descriptions of programs, fibers are the actually in-progress, running programs
 // They can be 'awaited' to get their result, or interrupted to stop them
 
