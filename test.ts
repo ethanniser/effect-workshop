@@ -1,57 +1,49 @@
-import { Console, Effect, Fiber, Ref, Schedule, pipe } from "effect";
+import {
+  Console,
+  Effect,
+  Fiber,
+  Ref,
+  Schedule,
+  pipe,
+  Request,
+  RequestResolver,
+} from "effect";
 
-const logRef = (ref: Ref.Ref<number>) =>
-  pipe(
-    Ref.get(ref),
-    Effect.flatMap((i) => Effect.log(i)),
-    Effect.repeat(Schedule.spaced(250)),
-    Effect.fork
-  );
+interface TestReq extends Request.Request<void, never> {
+  readonly id: number;
+  readonly _tag: "TestReq";
+}
+const TestReq = Request.tagged<TestReq>("TestReq");
+const TestReqResolver = RequestResolver.makeBatched(
+  (requests: Array<TestReq>) =>
+    Effect.gen(function* (_) {
+      yield* _(
+        Console.log(
+          "received request",
+          requests.map((r) => r.id)
+        )
+      );
+    }).pipe(
+      Effect.zipRight(
+        Effect.forEach(requests, (request) =>
+          Request.completeEffect(request, Effect.unit)
+        )
+      )
+    )
+);
 
-const one = Effect.gen(function* (_) {
-  let ref = yield* _(Ref.make(0));
-  yield* _(logRef(ref));
-
-  while (true) {
-    yield* _(Ref.update(ref, (i) => i + 1));
-  }
-});
-
-const two = Effect.gen(function* (_) {
-  let ref = yield* _(Ref.make(0));
-  yield* _(logRef(ref));
-
-  yield* _(
-    Ref.update(ref, (i) => i + 1),
-    Effect.forever
-  );
-});
-
-const three = Effect.gen(function* (_) {
-  let ref = yield* _(Ref.make(0));
-  yield* _(logRef(ref));
-
-  while (true) {
-    yield* _(Ref.update(ref, (i) => i + 1));
-    yield* _(Effect.yieldNow());
-  }
-});
+const makeRequest = (id: number) =>
+  Effect.request(TestReq({ id }), TestReqResolver);
 
 const main = Effect.gen(function* (_) {
-  yield* _(Console.log(" --- ONE --- "));
-  const handle = yield* _(Effect.fork(one));
-  yield* _(Effect.sleep("2 seconds"));
-  yield* _(Fiber.interrupt(handle));
-
-  yield* _(Console.log(" --- TWO --- "));
-  const handle2 = yield* _(Effect.fork(two));
-  yield* _(Effect.sleep("2 seconds"));
-  yield* _(Fiber.interrupt(handle2));
-
-  yield* _(Console.log(" --- THREE --- "));
-  const handle3 = yield* _(Effect.fork(three));
-  yield* _(Effect.sleep("2 seconds"));
-  yield* _(Fiber.interrupt(handle3));
+  const requests = [
+    Effect.sleep("1 seconds").pipe(
+      Effect.zipRight(Console.log("slept for 1 second"))
+    ),
+    makeRequest(2),
+    makeRequest(3),
+  ];
+  yield* _(Effect.all(requests, { batching: true, concurrency: "unbounded" }));
 });
 
 Effect.runPromise(main);
