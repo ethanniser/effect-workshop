@@ -26,6 +26,7 @@
     "@effect/rpc-workers": "latest",
     "@effect/schema": "latest",
     "@effect/typeclass": "latest",
+    "@opentelemetry/sdk-trace-base": "^1.21.0",
     "chalk": "^5.3.0",
     "effect": "latest",
     "meow": "^13.1.0",
