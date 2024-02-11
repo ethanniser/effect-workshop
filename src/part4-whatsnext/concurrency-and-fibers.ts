@@ -282,12 +282,6 @@ const runExample = () => {
 // to solve this problem, effect has the ability to mark certain regions of code as 'uninterruptible'
 // this is done by default for finalizers, but you can also do it yourself with `Effect.uninterruptible`
 
-// another really powerful, but extremely low-level feature is the ability to customize the scheduler
-// for example if you have a web app, where you have different fibers for lots of various things,
-// and one main fiber responsible for rendering the UI
-// you could create a custom scheduler that gives the UI fiber priority over the others
-// to ensure that the UI is always responsive
-
 // Finally, while structured concurrency is a powerful tool,
 // there might be times where you want to spawn a fiber that can outlive its parent
 
