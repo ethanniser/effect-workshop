@@ -19,6 +19,7 @@ import { Console, Effect, STM, TRef, pipe } from "effect";
 // You can think of this like how the function passed to `Effect.sync` gets run
 // It is guaranteed to run until it completes or fails, in one single synchronous step.
 // STM is like writing in the effect style, with tracked errors and dependencies but with this same guarantee.
+// But now with the additional guarantee that if there is a failure, the whole transaction is rolled back.
 
 // STM doesnt work on any state, but effect provides `T_` variants of many of its data types
 // the core of these is `TRef` which is a transactional reference to a value.
