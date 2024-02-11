@@ -288,6 +288,16 @@ const runExample = () => {
 // you could create a custom scheduler that gives the UI fiber priority over the others
 // to ensure that the UI is always responsive
 
+// Finally, while structured concurrency is a powerful tool,
+// there might be times where you want to spawn a fiber that can outlive its parent
+
+// Effect gives you a couple escape hatches for this, but they are very low-level and should be used with caution
+// if you dont have a reason not to use the normal structured concurrency model, you should use it
+
+// `forkScoped` spawns a fiber in the same scope as its parent
+// `forkDaemon` spawns a fiber in the top level, global scope
+// `forkIn` allows you specify a custom scope to spawn a fiber in with a `Scope`
+
 // next well take a very brief look at communication between fibers
 
 // first is `Deffered` which is basically a 'promise', but for fibers
