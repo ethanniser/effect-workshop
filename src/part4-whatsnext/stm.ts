@@ -150,7 +150,7 @@ const example = Effect.gen(function* (_) {
   );
 });
 
-Effect.runPromise(example); // all transactions roll back because our final check fails
+// Effect.runPromise(example); // all transactions roll back because our final check fails
 
 // what guarantees does STM give us?
 // 1. Atomicity: Each transfer operation is atomic. If any part of the transfer fails (e.g., due to insufficient funds),
@@ -164,3 +164,34 @@ Effect.runPromise(example); // all transactions roll back because our final chec
 // It enabled these benefits without locks, and is a powerful tool for managing shared state in a concurrent environment.
 // Because js is single threaded, we can be 100% sure when we commit a transaction,
 // it will run to completion without any other transactions running in between.
+
+// one final note about immutablity and STM
+// immutability is what enables STM to work, because it roles back to a previous state
+// because it can be sure that those previous states have not been modified
+
+const mutabilityBad = Effect.gen(function* (_) {
+  const ref = yield* _(TRef.make(new Date()));
+
+  const transaction = pipe(
+    // DONT DO THIS !!!
+    TRef.update(ref, (date) => {
+      date.setMonth(date.getMonth() + 1);
+      return date;
+    }),
+    STM.zipRight(STM.fail(new Error("Boom!")))
+  );
+
+  const before = yield* _(STM.commit(TRef.get(ref)));
+  yield* _(
+    STM.commit(transaction),
+    Effect.catchAll((error) => Console.error(error.message))
+  );
+  const after = yield* _(STM.commit(TRef.get(ref)));
+
+  console.log(before.toUTCString(), after.toUTCString());
+});
+
+Effect.runPromise(mutabilityBad);
+
+// This is a contrived example, but it shows that if you have a mutable reference
+// you basically lose all the guarantees of STM, so be careful with your data model
