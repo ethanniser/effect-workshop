@@ -114,6 +114,12 @@ const five = Schema.encodeEither(NumberFromString)(n);
 // again remember that transformations can be async or effectful,
 // just how `runSync` errors if the effect is async, `encodeSync` will error if the transformation is async
 
+// another example
+const date = new Date();
+const toString = Schema.encodeSync(Schema.DateFromString)(date);
+const fromString = Schema.decodeSync(Schema.DateFromString)(toString);
+console.log(toString, fromString);
+
 // What about one-way transformations?
 // Of course some transformations are lossy, and cannot be reversed.
 // Schemas are `encode` biased (thats why `is`/`assert`/`validate` are all for the `A` type)

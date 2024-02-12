@@ -20,8 +20,6 @@ export const StartupMessage = S.struct({
   name: S.string,
 });
 
-export const StartupMessageFromJSON = S.parseJson(StartupMessage);
-
 export type StartupMessage = S.Schema.To<typeof StartupMessage>;
 
 export class BadStartupMessageError extends Data.TaggedError(
@@ -44,8 +42,6 @@ export const ServerIncomingMessage = S.union(
     message: S.string,
   })
 );
-
-export const ServerIncomingMessageFromJSON = S.parseJson(ServerIncomingMessage);
 
 export type ServerIncomingMessage = S.Schema.To<typeof ServerIncomingMessage>;
 
@@ -79,7 +75,6 @@ export const ServerOutgoingMessage = S.union(
     color: Color,
   })
 );
-export const ServerOutgoingMessageFromJSON = S.parseJson(ServerOutgoingMessage);
 export type ServerOutgoingMessage = S.Schema.To<typeof ServerOutgoingMessage>;
 
 export interface WebSocketConnection {
