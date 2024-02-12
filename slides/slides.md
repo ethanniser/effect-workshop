@@ -103,6 +103,13 @@ These are all great things, but the core of it is a framework that allows us to 
 
 ---
 
+# What do you need?
+
+ - A way to run typescript (node or bun)
+ - This repo (available from my github)
+
+---
+
 ```yaml
 layout: fact
 ```

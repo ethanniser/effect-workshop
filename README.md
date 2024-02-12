@@ -2,13 +2,15 @@
 
 ## REQUIREMENTS:
 
-### NodeJS 20
+### A way to run typescript Node (with ts-node or tsx) or Bun
 
-Hopefully you already have this, if not you can install at https://nodejs.org/en
+https://nodejs.org/en
 
-### (Optional) Bun
+```bash
+npm i -g tsx
+```
 
-I'm using bun just because its half a second faster to run typescript than with `tsx` or `ts-node`
+I'm using bun just because its over twice as fast to run typescript than with `tsx` or `ts-node`
 If you want to also use bun you can install it at https://bun.sh/docs/installation
 
 ### Install JS Dependecies
@@ -22,4 +24,4 @@ bun i
 
 ### An editor that supports LSP
 
-Hovering to see types, autocompletion, and go-to-definition are gonna be price useful. I'll be using VSCode, but you can use any editor that supports LSP.
+Hovering to see types, autocompletion, and go-to-definition are gonna be pretty useful. I'll be using VSCode, but you can use any editor that supports LSP.
