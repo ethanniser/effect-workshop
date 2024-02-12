@@ -538,3 +538,10 @@ PLEASE DONT DO THIS, why...
 - `Chunk<T>`: An immutable, functional array
 - `HashSet<T> / HashMap<K, V>`: Immutable, functional collections that support custom hashing and equality with `Equal` and `Hash`
 - `Data`: A module for auto-implementing `Equal` and `Hash` for data
+
+---
+
+# Time for a break
+
+ - I know that was a lot
+ - After the break we'll start looking at some practical applications
