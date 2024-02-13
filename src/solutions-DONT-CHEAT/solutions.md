@@ -1,3 +1,5 @@
+# Part 1
+
 ## Scope
 
 ### Exercise 1
@@ -69,3 +71,21 @@ const { nextIntBetween } = Effect.serviceFunctions(Random);
 ```
 
 `Effect.service*` functions provide a convenient way to access parts of a service without having to manually get the service first.
+
+## Errors
+
+## Data
+
+# Part 2
+
+## Match
+
+## Schema
+
+# Part 3
+
+## Stream
+
+## Schedule
+
+## Ref
