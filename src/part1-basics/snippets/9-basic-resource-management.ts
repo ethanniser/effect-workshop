@@ -56,7 +56,7 @@ Effect.runSync(four);
 import fs from "fs/promises";
 
 const acquire = Effect.tryPromise({
-  try: () => fs.open("package.json", "r"),
+  try: () => fs.open("1-what-is-a-program.js", "r"),
   catch: (e) => new Error("Failed to open file"),
 }).pipe(Effect.zipLeft(Console.log("File opened")));
 
@@ -85,3 +85,29 @@ await Effect.runPromise(program);
 const program2 = Effect.acquireUseRelease(acquire, useFile, release);
 
 await Effect.runPromise(program2);
+
+// This ensures you dont accidentally use the resource outside of the scope
+// Which is possible if you close the scope too early
+console.log("\n\n --- \n\n");
+const program3 = Effect.gen(function* (_) {
+  const handle = yield* _(file);
+  yield* _(Console.log("Using file"));
+  yield* _(
+    Effect.tryPromise(() => handle.readFile()),
+    Effect.andThen((buf) => Console.log(buf.toString()))
+  );
+}).pipe(Effect.scoped); // scope closed after all usages are finished- ok!
+
+await Effect.runPromise(program3);
+
+console.log("\n\n --- \n\n");
+const program4 = Effect.gen(function* (_) {
+  const handle = yield* _(file, Effect.scoped); // scope closed, but resource is still used- no type error! scary!
+  yield* _(Console.log("Using file"));
+  yield* _(
+    Effect.tryPromise(() => handle.readFile()),
+    Effect.andThen((buf) => Console.log(buf.toString()))
+  );
+});
+
+// await Effect.runPromise(program4);

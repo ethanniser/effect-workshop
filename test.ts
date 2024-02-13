@@ -1,49 +1,38 @@
-import {
-  Console,
-  Effect,
-  Fiber,
-  Ref,
-  Schedule,
-  pipe,
-  Request,
-  RequestResolver,
-} from "effect";
+import { Console, Effect, Scope, pipe } from "effect";
 
-interface TestReq extends Request.Request<void, never> {
-  readonly id: number;
-  readonly _tag: "TestReq";
-}
-const TestReq = Request.tagged<TestReq>("TestReq");
-const TestReqResolver = RequestResolver.makeBatched(
-  (requests: Array<TestReq>) =>
-    Effect.gen(function* (_) {
-      yield* _(
-        Console.log(
-          "received request",
-          requests.map((r) => r.id)
-        )
-      );
-    }).pipe(
-      Effect.zipRight(
-        Effect.forEach(requests, (request) =>
-          Request.completeEffect(request, Effect.unit)
-        )
-      )
+// Exercise 1
+// Write an that models the acquisition and release of this mock file
+// it should match the existing declaration
+
+class MockFile {
+  private status: "open" | "closed" = "open";
+  constructor(public readonly fd: number) {}
+  static readonly open = (fd: number) =>
+    pipe(
+      Console.log(`open ${fd}`),
+      Effect.andThen(() => new MockFile(fd))
+    );
+  public close = Effect.suspend(() =>
+    Effect.sync(() => (this.status = "closed")).pipe(
+      Effect.andThen(Console.log(`close ${this.fd}`))
     )
-);
+  );
+  public read = Effect.suspend(() =>
+    this.status === "open"
+      ? Effect.succeed("data")
+      : Effect.fail("file is closed!")
+  );
+}
 
-const makeRequest = (id: number) =>
-  Effect.request(TestReq({ id }), TestReqResolver);
+const file = (fd: number) =>
+  Effect.acquireRelease(MockFile.open(fd), (file) => file.close);
 
-const main = Effect.gen(function* (_) {
-  const requests = [
-    Effect.sleep("1 seconds").pipe(
-      Effect.zipRight(Console.log("slept for 1 second"))
-    ),
-    makeRequest(2),
-    makeRequest(3),
-  ];
-  yield* _(Effect.all(requests, { batching: true, concurrency: "unbounded" }));
+const test1 = Effect.gen(function* (_) {
+  const file1 = yield* _(file(1), Effect.scoped);
+  const file2 = yield* _(file(2), Effect.scoped);
+  const data1 = yield* _(file1.read);
+  const data2 = yield* _(file2.read);
+  console.log(data1, data2);
 });
 
-Effect.runPromise(main);
+Effect.runPromise(test1);
