@@ -7,7 +7,7 @@ import * as T from "../../testDriver";
 
 class MockFile {
   constructor(public readonly fd: number) {}
-  static open = (fd: number) =>
+  static readonly open = (fd: number) =>
     pipe(
       T.logTest(`open ${fd}`),
       Effect.andThen(() => new MockFile(fd))

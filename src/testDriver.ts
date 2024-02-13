@@ -13,7 +13,10 @@ class TestLogs extends Context.Tag("TestLogs")<
   TestLogs,
   Ref.Ref<ReadonlyArray<unknown>>
 >() {
-  static Live = Layer.effect(TestLogs, Ref.make<ReadonlyArray<unknown>>([]));
+  static readonly Live = Layer.effect(
+    TestLogs,
+    Ref.make<ReadonlyArray<unknown>>([])
+  );
 }
 
 class Test extends Context.Tag("Test")<
@@ -23,7 +26,7 @@ class Test extends Context.Tag("Test")<
     assertLogs: (expected: Array<unknown>) => Effect.Effect<void, Error>;
   }
 >() {
-  static Live = Layer.effect(
+  static readonly Live = Layer.effect(
     Test,
     Effect.gen(function* (_) {
       const logsRef = yield* _(TestLogs);

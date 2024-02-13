@@ -54,7 +54,7 @@ class Database extends Context.Tag("Database")<
   //       getUserById: (id: number) => Effect.succeed(`user ${id}`),
   //     };
   //   });
-  static Live = Layer.scoped(
+  static readonly Live = Layer.scoped(
     Database,
     Effect.acquireRelease(
       Effect.sync(() => {
