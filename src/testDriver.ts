@@ -79,9 +79,15 @@ const testRunAssert = (
             expected.failure && assert.deepStrictEqual(error, expected.failure)
         ),
     }), // again defect on purpose
-    Effect.andThen(Console.log("\n--- Test passed ---\n")),
+    Effect.tapBoth({
+      onSuccess: () => Console.log("\n--- Test passed ---\n"),
+      onFailure: () =>
+        expected.failure ? Console.log("\n--- Test passed ---\n") : Effect.unit, // passed because assert already succeeded
+    }),
     Effect.provide(testLive),
-    Effect.catchAllCause((cause) => Console.error(cause.toString())),
+    Effect.catchAllCause((cause) =>
+      Console.error("ERROR: " + cause.toString())
+    ),
     Effect.runFork
   );
 
