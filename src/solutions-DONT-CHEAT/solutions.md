@@ -54,7 +54,7 @@ const nextIntBetween = (min: number, max: number) =>
   Random.pipe(Effect.andThen((_) => _.nextIntBetween(min, max)));
 ```
 
-#### Easy Solution
+#### Built-in Solution
 
 ```ts
 const {
@@ -75,6 +75,74 @@ const { nextIntBetween } = Effect.serviceFunctions(Random);
 ## Errors
 
 ## Data
+
+### Exercise 1
+
+```ts
+class Transaction implements Equal.Equal, Hash.Hash {
+  constructor(
+    public readonly id: string,
+    public readonly amount: number,
+    public readonly time: Date
+  ) {}
+
+  [Equal.symbol](that: unknown) {
+    return (
+      that instanceof Transaction &&
+      this.id === that.id &&
+      this.amount === that.amount &&
+      this.time.getTime() === that.time.getTime()
+    );
+  }
+
+  [Hash.symbol]() {
+    return Hash.combine(Hash.string(this.id))(
+      Hash.combine(Hash.number(this.amount))(Hash.number(this.time.getTime()))
+    );
+  }
+}
+```
+
+These implementations are really up to you, but this is one way
+
+### Exercise 2
+
+#### With a tagged object
+
+```ts
+class ASCIIString extends Data.TaggedClass("ASCIIString")<{
+  readonly self: string;
+}> {
+  static of(self: string): ASCIIString {
+    if (/^[\x00-\x7F]*$/.test(self)) {
+      return new ASCIIString({ self });
+    } else {
+      throw new Error("Not an ASCII string");
+    }
+  }
+}
+
+const string1 = ASCIIString.of("hello");
+const string2 = ASCIIString.of("hello🌍");
+```
+
+Using `Data.TaggedClass` we can create a type with a custom constructor and equal and hash implementations in one place.
+
+#### With a brand
+
+```ts
+type ASCIIString = string & Brand.Brand<"ASCIIString">;
+
+const ASCIIString = Brand.refined<ASCIIString>(
+  (s) => /^[\x00-\x7F]*$/.test(s),
+  (s) => Brand.error(`${s} is not ASCII`)
+);
+
+const string1 = ASCIIString("hello");
+const string2 = ASCIIString("hello🌍");
+```
+
+If we want to avoid the overhead of a object, we can 'brand' a type. Using `Brand.refined` we can create a constructor
 
 # Part 2
 
