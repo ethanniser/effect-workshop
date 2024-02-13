@@ -1,4 +1,4 @@
-import { Effect, Option, ReadonlyArray } from "effect";
+import { Effect, Either, Option, ReadonlyArray } from "effect";
 import * as T from "../../testDriver";
 
 // Exercise 1
@@ -22,26 +22,20 @@ const maybeFail = Effect.suspend(() =>
 );
 const maybeFailArr = new Array(10).fill(0).map(() => maybeFail);
 
-// const testTwo = Effect.all(maybeFailArr);
+const testTwo = Effect.all(maybeFailArr);
 
-const testTwo = Effect.all(maybeFailArr, {
-  mode: "validate",
-}).pipe(
-  Effect.mapError((errors) => errors.filter(Option.isSome).map((_) => _.value))
-);
-
-T.testRunAssert(testTwo, {
-  failure: ["odd 1", "odd 3", "odd 5", "odd 7", "odd 9"],
-});
+// T.testRunAssert(testTwo, {
+//   failure: ["odd 1", "odd 3", "odd 5", "odd 7", "odd 9"],
+// });
 
 // Exercise 3
 // Now succeed with both a array of success values and an array of errors
 
 const testThree = Effect.all(maybeFailArr);
 
-T.testRunAssert(testThree, {
-  success: {
-    success: [2, 4, 6, 8, 10],
-    failure: [1, 3, 5, 7, 9],
-  },
-});
+// T.testRunAssert(testThree, {
+//   success: {
+//     success: [2, 4, 6, 8, 10],
+//     failure: ["odd 1", "odd 3", "odd 5", "odd 7", "odd 9"],
+//   },
+// });

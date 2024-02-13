@@ -64,7 +64,7 @@ const testRunAssert = (
   }
 ) =>
   pipe(
-    Console.log("\n--- New Test ---\n"),
+    Console.log("\n--- New Test ---"),
     Effect.zipRight(effect),
     Effect.zipLeft(assertLogs(expected.logs ?? [])),
     Effect.tapBoth({
@@ -80,6 +80,7 @@ const testRunAssert = (
         }),
     }), // again defect on purpose
     Effect.catchAll((error) => Effect.succeed(error)),
+    Effect.andThen((value) => Console.log("--- Test Passed ---\n")),
     Effect.provide(testLive),
     Effect.catchAllCause((cause) => Console.error(cause.toString())),
     Effect.runFork

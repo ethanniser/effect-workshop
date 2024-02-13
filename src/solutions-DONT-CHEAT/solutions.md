@@ -103,6 +103,31 @@ const testOne = Effect.retry(eventuallySuceeds, Schedule.forever);
 const testOne = Effect.eventually(eventuallySuceeds);
 ```
 
+### Exercise 2
+
+```ts
+const testTwo = Effect.all(maybeFailArr, {
+  mode: "validate",
+}).pipe(
+  Effect.mapError((errors) => errors.filter(Option.isSome).map((_) => _.value))
+);
+```
+
+We can use the `validate` mode to collect all errors, then map to remove the `None`'s (representing effects that did not fail)
+
+### Exercise 3
+
+```ts
+const testThree = Effect.all(maybeFailArr, { mode: "either" }).pipe(
+  Effect.andThen((result) => ({
+    success: result.filter(Either.isRight).map((_) => _.right),
+    failure: result.filter(Either.isLeft).map((_) => _.left),
+  }))
+);
+```
+
+We can use the `either` mode to get all results of all effects, then filter to get sucesses and failures
+
 ## Data
 
 ### Exercise 1
