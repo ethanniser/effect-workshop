@@ -313,3 +313,17 @@ const three = Effect.zipRight(Effect.succeed(5), Console.log("hi"));
 const four = Effect.tap(Effect.succeed(5), (x) => Console.log(x));
 const five = Effect.tap(Effect.succeed(5), () => Console.log("hi"));
 const six = Effect.zipLeft(Effect.succeed(5), Console.log("hi"));
+
+// Or you could just ignore all of that an use `Effect.andThen`
+// It can take: a value, promise, or effect... or a function that returns any of those
+const foo = Effect.succeed(5);
+
+const seven = Effect.andThen(foo, "hi");
+const eight = Effect.andThen(foo, Promise.resolve("hi"));
+const nine = Effect.andThen(foo, Effect.succeed("hi"));
+const ten = Effect.andThen(foo, (x) => `hi ${x}`);
+const eleven = Effect.andThen(foo, (x) => Promise.resolve(`hi ${x}`));
+const twelve = Effect.andThen(foo, (x) => Console.log(`hi ${x}`));
+
+// curiously the sync versions are trusted to not throw errors
+// but the async versions are not- *shrug*
