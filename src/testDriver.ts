@@ -69,25 +69,19 @@ const testRunAssert = (
     Effect.zipLeft(assertLogs(expected.logs ?? [])),
     Effect.tapBoth({
       onSuccess: (value) =>
-        Effect.sync(
-          () =>
-            expected.success && assert.deepStrictEqual(value, expected.success)
-        ),
+        Effect.sync(() => {
+          expected.success && assert.deepStrictEqual(value, expected.success);
+          expected.failure && assert.fail("Expected failure but got success");
+        }),
       onFailure: (error) =>
-        Effect.sync(
-          () =>
-            expected.failure && assert.deepStrictEqual(error, expected.failure)
-        ),
+        Effect.sync(() => {
+          expected.failure && assert.deepStrictEqual(error, expected.failure);
+          expected.success && assert.fail("Expected success but got failure");
+        }),
     }), // again defect on purpose
-    Effect.tapBoth({
-      onSuccess: () => Console.log("\n--- Test passed ---\n"),
-      onFailure: () =>
-        expected.failure ? Console.log("\n--- Test passed ---\n") : Effect.unit, // passed because assert already succeeded
-    }),
+    Effect.catchAll((error) => Effect.succeed(error)),
     Effect.provide(testLive),
-    Effect.catchAllCause((cause) =>
-      Console.error("ERROR: " + cause.toString())
-    ),
+    Effect.catchAllCause((cause) => Console.error(cause.toString())),
     Effect.runFork
   );
 
