@@ -74,6 +74,35 @@ const { nextIntBetween } = Effect.serviceFunctions(Random);
 
 ## Errors
 
+### Exercise 1
+
+#### Recursive Solution
+
+```ts
+const testOne: Effect.Effect<number> = Effect.suspend(() =>
+  Effect.matchEffect(eventuallySuceeds, {
+    onSuccess: (_) => Effect.succeed(_),
+    onFailure: () => testOne,
+  })
+);
+```
+
+#### Schedule Solution
+
+```ts
+const testOne = Effect.retry(eventuallySuceeds, { times: Infinity });
+// or
+const testOne = Effect.retry(eventuallySuceeds, { while: () => true });
+// or
+const testOne = Effect.retry(eventuallySuceeds, Schedule.forever);
+```
+
+#### Convient Solution
+
+```ts
+const testOne = Effect.eventually(eventuallySuceeds);
+```
+
 ## Data
 
 ### Exercise 1
