@@ -1,4 +1,4 @@
-import { Effect, Exit, Scope, pipe } from "effect";
+import { Effect, Scope, pipe } from "effect";
 import * as T from "../../testDriver";
 
 // Exercise 1
