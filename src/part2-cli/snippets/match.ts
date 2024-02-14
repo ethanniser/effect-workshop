@@ -3,6 +3,9 @@ import { Match } from "effect";
 // Pattern matching is a powerful pattern that allows handling multiple 'cases' in a single expression.
 // It is similar to switch statements in JavaScript but more powerful and flexible.
 
+// To stress again, pattern matching is an expression, not a statement. This means that it can be used as a value.
+// It is essentially a better version of a switch statement inside a IIFE
+
 // There are two types of 'matches', but they are both basically the same thing.
 // The first defines a matcher that takes in some type and can be used multiple times
 // The second is a one-time matcher that is used to match a single value. (basically the first but used immediately)

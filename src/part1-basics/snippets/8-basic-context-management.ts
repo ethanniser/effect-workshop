@@ -144,3 +144,13 @@ class Foo extends Context.Tag("Foo")<Foo, { readonly foo: string }>() {
 
   const runnable = program.pipe(Effect.provide(Foo.live));
 }
+
+// also another common pattern in inferring the type of a service from the function that creates it
+
+const makeService = Effect.succeed({ foo: "foo" });
+class Foo2 extends Context.Tag("Foo")<
+  Foo2,
+  Effect.Effect.Success<typeof makeService>
+>() {
+  static readonly Live = Layer.effect(Foo2, makeService);
+}

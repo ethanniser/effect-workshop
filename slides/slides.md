@@ -111,6 +111,8 @@ These are all great things, but the core of it is a framework that allows us to 
 
 <!--
 
+maybe ask about general skill level / familiarity with effect
+
 I want to stress that even though this is the schedule on paper, I want to emphasize that there is a lot of room for elasticity in this workshop. I likely brought a lot of material, so if we are understanding stuff quickly theres lots to get through,
 
 but, and this is the much more likely path, if we are moving at a slower pace than whats up here, that is 100% ok. We'll definitely end with the 'peek into advanced effect' material, but if we don't make it fully through the second app that is totally fine. I promise even so you will learn a lot about effect today. And of course all of these materials are available to you after the workshop as well.
@@ -549,8 +551,8 @@ PLEASE DONT DO THIS, why...
 # Effect Datatypes
 
 - `Option<T>`: A value that may or may not exist
-- `Either<E, A>`: A disjointed union of two types
-- `Exit<E, A>`: Essentially a `Either<A, Cause<E>>`
+- `Either<A, E>`: A disjointed union of two types
+- `Exit<A, E>`: Essentially a `Either<A, Cause<E>>`
 - `Cause<E>`: The result of a computation
 - `Duration`: A time interval
 - `Chunk<T>`: An immutable, functional array
