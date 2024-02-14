@@ -252,4 +252,31 @@ const testOne = Stream.asyncScoped<string, FileStreamError>((emit) =>
 
 First we create a scoped effect that creates and closes the file stream. Then we use `Stream.asyncScoped` to create the stream, knowing it will close the scope when it's done or interrupted.
 
+### Exercise 2
+
+#### Manual Solution
+
+```ts
+const testTwo = powersOfTwo.pipe(
+  Stream.mapAccum(null as null | number, (acc, next) => {
+    if (acc === next) {
+      return [acc, Option.none()];
+    } else {
+      return [next, Option.some(next)];
+    }
+  }),
+  Stream.filterMap(identity)
+);
+```
+
+Using `Stream.mapAccum` we can modify our stream while keeping track of some state. Then we could use `Stream.filter(Option.isSome)` and `Stream.map(_ => _.value)` to remove the `None`'s, but `Stream.filterMap` 'filters' by removing `None`'s and keeping the `Some`'s. So we can just use that with our existing options.
+
+#### Built-in Solution
+
+```ts
+const testTwo = Stream.changes(powersOfTwo);
+```
+
+Pretty self-explanatory, useful for when you want to keep track of changes in a stream.
+
 ## Schedule
