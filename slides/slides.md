@@ -98,15 +98,31 @@ These are all great things, but the core of it is a framework that allows us to 
   - Introduction to core Effect concepts
   - Real world examples by rewriting two apps
   - A peek into 'advanced' Effect
-  
+
   </v-clicks>
+
+<br>
+
+<v-click>
+
+### There's lots of room for _elasticity_
+
+</v-click>
+
+<!--
+
+I want to stress that even though this is the schedule on paper, I want to emphasize that there is a lot of room for elasticity in this workshop. I likely brought a lot of material, so if we are understanding stuff quickly theres lots to get through,
+
+but, and this is the much more likely path, if we are moving at a slower pace than whats up here, that is 100% ok. We'll definitely end with the 'peek into advanced effect' material, but if we don't make it fully through the second app that is totally fine. I promise even so you will learn a lot about effect today. And of course all of these materials are available to you after the workshop as well.
+
+ -->
 
 ---
 
 # What do you need?
 
- - A way to run typescript (node or bun)
- - This repo (available from my github)
+- A way to run typescript (node or bun)
+- This repo (available from my github)
 
 ---
 
@@ -543,5 +559,5 @@ PLEASE DONT DO THIS, why...
 
 # Time for a break
 
- - I know that was a lot
- - After the break we'll start looking at some practical applications
+- I know that was a lot
+- After the break we'll start looking at some practical applications
