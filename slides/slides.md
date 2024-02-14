@@ -565,3 +565,92 @@ PLEASE DONT DO THIS, why...
 
 - I know that was a lot
 - After the break we'll start looking at some practical applications
+
+---
+
+# Part 2: Rewriting a CLI app
+
+---
+
+# Match
+
+- Pattern matching allows for the handling of multiple cases in a single expression
+- Can match on values or predicates
+- Type level assurance that all cases are handled
+
+---
+
+# Schema
+
+## A `Schema<A, I, R>` can:
+
+- validating that `unknown` data is of type `A`
+- validating that `unknown` data is of type `I`
+- encoding `A` to `I`
+- decoding `I` to `R`
+
+## `Schema` is incredibly powerful
+
+- Can model basically any data structure
+- Filters
+- Transforms (can be effectful)
+- Pretty printing errors
+
+---
+
+# Part 3: Rewriting a Web Server
+
+---
+
+# Ref
+
+- A **mutable** reference to an **immutable** value
+- All actions are effectful
+- Useful for sharing state (there are other options if you do not want this)
+
+---
+
+# Schedule
+
+- A `Schedule` is a description of a series of delays
+- Can be used for retrying on failure, or repeating on success
+- Have inputs (the output of an effect or another schedule) and outputs (depends on the schedule)
+- Very composable (like everything in effect!)
+
+---
+
+# Stream
+
+- A `Stream` is an Effect that may produce none, one, or many values
+- "Pull" based (like an iterator)
+- Has all the same properties as an `Effect`, most of the same combinators
+- Must be 'ran' to produce values
+- `Sink` type for more advanced and resuable consuming of streams
+
+---
+
+# Part 4: Peek into 'advanced' Effect
+
+---
+
+# Concurrency and Fibers
+
+---
+
+# STM
+
+---
+
+# Runtime and FiberRefs
+
+---
+
+# Telemtry and Observability
+
+---
+
+# RPC
+
+---
+
+# Batching and Caching
