@@ -202,9 +202,60 @@ If we want to avoid the overhead of a object, we can 'brand' a type. Using `Bran
 
 # Part 2
 
-## Match
-
 ## Schema
+
+### Exercise 1
+
+```ts
+const A = S.struct({
+  bool: S.boolean,
+  num: S.number,
+  str: S.string,
+  sym: S.symbol,
+});
+const B = S.literal("a", "b", "c");
+const C = S.struct({
+  code: S.templateLiteral(B, S.literal("-"), B, S.literal("-"), S.number),
+  data: S.tuple(S.array(A), S.keyof(A)),
+});
+const D: S.Schema<D> = S.struct({
+  value: S.string,
+  next: S.nullable(S.suspend(() => D)),
+});
+const E = S.struct({
+  ab: S.union(A, B),
+  partial: S.partial(A),
+});
+```
+
+### Exercise 2
+
+```ts
+const URLFromString = S.transformOrFail(
+  S.string,
+  URLSchema,
+  (string, _, ast) =>
+    ParseResult.try({
+      try: () => new URL(string),
+      catch: (e) =>
+        ParseResult.type(
+          ast,
+          string,
+          e instanceof Error ? e.message : undefined
+        ),
+    }),
+  (url) => ParseResult.succeed(url.toString())
+);
+
+const IsHttps = URLSchema.pipe(S.filter((url) => url.protocol === "https:"));
+
+const HttpsURL = S.compose(URLFromString, IsHttps);
+```
+
+Using `transformOrFail` we can create a transformation that could error. `ParseResult.try` makes it easy to work with functions that could throw errors. `ParseResult.type` is used to create a parse result with a custom error message.
+`S.filter` is used to filter out values that don't match a predicate.
+
+Finally, `S.compose` is used to compose two schemas together.
 
 # Part 3
 
