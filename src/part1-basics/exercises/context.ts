@@ -14,7 +14,7 @@ const test1 = Effect.gen(function* (_) {
   return foo.bar;
 }).pipe(Effect.provide(Foo.Live));
 
-T.testRunAssert(test1, { success: "imFromContext!" });
+await T.testRunAssert(1, test1, { success: "imFromContext!" });
 
 // Exercise 2
 
@@ -53,4 +53,6 @@ const test2 = Effect.gen(function* (_) {
   return { int, bool, intBetween };
 }).pipe(Effect.provide(Random.Mock));
 
-T.testRunAssert(test2, { success: { int: 42, bool: true, intBetween: 30 } });
+await T.testRunAssert(2, test2, {
+  success: { int: 42, bool: true, intBetween: 30 },
+});

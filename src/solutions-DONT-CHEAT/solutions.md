@@ -208,6 +208,48 @@ If we want to avoid the overhead of a object, we can 'brand' a type. Using `Bran
 
 ## Stream
 
-## Schedule
+### Exercise 1
 
-## Ref
+#### With `Stream.asyncInterrupt`
+
+```ts
+const testOne = Stream.asyncInterrupt<string, FileStreamError>((emit) => {
+  const fileStream = fs.createReadStream("test.txt");
+  fileStream.on("data", (chunk) =>
+    emit(Effect.succeed(Chunk.of(chunk.toString())))
+  );
+  fileStream.on("error", (error) =>
+    emit(Effect.fail(Option.some(new FileStreamError(error))))
+  );
+  fileStream.on("end", () => emit(Effect.fail(Option.none())));
+  return Either.left(Effect.sync(() => fileStream.close()));
+});
+```
+
+Using `Stream.asyncInterrupt` we can create a stream that can a 'interrupt' or 'unsuscribe' effect. We can use this to close the file stream.
+
+#### With `Stream.asyncScoped`
+
+```ts
+const scopedFile = Effect.acquireRelease(
+  Effect.sync(() => fs.createReadStream("test.txt")),
+  (stream) => Effect.sync(() => stream.close())
+);
+
+const testOne = Stream.asyncScoped<string, FileStreamError>((emit) =>
+  Effect.gen(function* (_) {
+    const fileStream = yield* _(scopedFile);
+    fileStream.on("data", (chunk) =>
+      emit(Effect.succeed(Chunk.of(chunk.toString())))
+    );
+    fileStream.on("error", (error) =>
+      emit(Effect.fail(Option.some(new FileStreamError(error))))
+    );
+    fileStream.on("end", () => emit(Effect.fail(Option.none())));
+  })
+);
+```
+
+First we create a scoped effect that creates and closes the file stream. Then we use `Stream.asyncScoped` to create the stream, knowing it will close the scope when it's done or interrupted.
+
+## Schedule

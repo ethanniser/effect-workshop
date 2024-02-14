@@ -56,6 +56,7 @@ const { logTest, assertLogs } = Effect.serviceFunctions(Test);
 const testLive = Layer.provide(Test.Live, TestLogs.Live);
 
 const testRunAssert = (
+  number: number,
   effect: Effect.Effect<void, any, Test>,
   expected: {
     logs?: Array<unknown>;
@@ -64,7 +65,7 @@ const testRunAssert = (
   }
 ) =>
   pipe(
-    Console.log("\n--- New Test ---"),
+    Console.log(`\n--- Test ${number} Start ---`),
     Effect.zipRight(effect),
     Effect.zipLeft(assertLogs(expected.logs ?? [])),
     Effect.tapBoth({
@@ -80,10 +81,10 @@ const testRunAssert = (
         }),
     }), // again defect on purpose
     Effect.catchAll((error) => Effect.succeed(error)),
-    Effect.andThen((value) => Console.log("--- Test Passed ---\n")),
+    Effect.andThen((value) => Console.log(`--- Test ${number} Passed ---\n`)),
     Effect.provide(testLive),
     Effect.catchAllCause((cause) => Console.error(cause.toString())),
-    Effect.runFork
+    Effect.runPromise
   );
 
 export { logTest, assertLogs, testRunAssert };

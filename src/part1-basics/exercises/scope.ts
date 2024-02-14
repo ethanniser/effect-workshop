@@ -22,7 +22,9 @@ const test1 = Effect.gen(function* (_) {
   const file2 = yield* _(file(2));
 }).pipe(Effect.scoped);
 
-T.testRunAssert(test1, { logs: ["open 1", "open 2", "close 2", "close 1"] });
+await T.testRunAssert(1, test1, {
+  logs: ["open 1", "open 2", "close 2", "close 1"],
+});
 
 // Exercise 2
 // In the first example both of the scopes from both file1 and file2 are 'merged' into one
@@ -35,6 +37,6 @@ const test2 = Effect.gen(function* (_) {
 }).pipe(Effect.scoped);
 
 // uncomment after you finish exercise 1
-// T.testRunAssert(test2, {
+// await T.testRunAssert(2, test2, {
 //   logs: ["open 1", "open 2", "close 1", "hi!", "close 2"],
 // });

@@ -1,4 +1,13 @@
-import { Chunk, Console, Effect, Option, Sink, Stream, pipe } from "effect";
+import {
+  Chunk,
+  Console,
+  Effect,
+  Either,
+  Option,
+  Sink,
+  Stream,
+  pipe,
+} from "effect";
 
 // For a moment consider these two types: `T` and `T[]`
 // What semantics do they share? What semantics are different?
@@ -40,7 +49,7 @@ Stream.fromEffect(Effect.sync(() => Date.now()));
 // But really you do the processing not by 'running' the stream, but by 'transforming' the stream.
 
 // consider this stream:
-const spacedInts = Stream.async<number>((emit) => {
+const spacedInts = Stream.asyncInterrupt<number>((emit) => {
   let n = 0;
   const interval = setInterval(() => {
     if (n > 4) {
@@ -50,7 +59,7 @@ const spacedInts = Stream.async<number>((emit) => {
     n++;
     emit(Effect.succeed(Chunk.of(n)));
   }, 250);
-  return () => clearInterval(interval);
+  return Either.left(Effect.sync(() => clearInterval(interval)));
 });
 
 // What is a chunk? A collection of values like an array.

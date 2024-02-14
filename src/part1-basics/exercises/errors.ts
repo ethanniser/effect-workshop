@@ -11,7 +11,7 @@ const eventuallySuceeds = Effect.suspend(() =>
 
 const testOne = eventuallySuceeds;
 
-T.testRunAssert(testOne, { success: 5 });
+await T.testRunAssert(1, testOne, { success: 5 });
 
 // Exercise 2
 // Instead of short circuiting on the first error, collect all errors and fail with an array of them
@@ -24,7 +24,7 @@ const maybeFailArr = new Array(10).fill(0).map(() => maybeFail);
 
 const testTwo = Effect.all(maybeFailArr);
 
-// T.testRunAssert(testTwo, {
+// await T.testRunAssert(2, testTwo, {
 //   failure: ["odd 1", "odd 3", "odd 5", "odd 7", "odd 9"],
 // });
 
@@ -33,7 +33,7 @@ const testTwo = Effect.all(maybeFailArr);
 
 const testThree = Effect.all(maybeFailArr);
 
-// T.testRunAssert(testThree, {
+// await T.testRunAssert(3, testThree, {
 //   success: {
 //     success: [2, 4, 6, 8, 10],
 //     failure: ["odd 1", "odd 3", "odd 5", "odd 7", "odd 9"],
