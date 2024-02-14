@@ -283,6 +283,39 @@ Pretty self-explanatory, useful for when you want to keep track of changes in a 
 
 ## Schedule
 
+### Exercise 1
+
+#### Simplified Solution
+
+```ts
+function cronToSchedule({
+  minutes,
+  hours,
+  days,
+}: Cron): Schedule.Schedule<unknown, unknown, unknown> {
+  const minutesSchedule = Schedule.spaced(Duration.minutes(minutes));
+  const hoursSchedule = Schedule.spaced(Duration.hours(hours));
+  const daysSchedule = Schedule.spaced(Duration.days(days));
+  const finalSchedule = pipe(
+    minutesSchedule,
+    Schedule.intersect(hoursSchedule),
+    Schedule.intersect(daysSchedule)
+  );
+  return finalSchedule;
+}
+```
+
+We can use `Schedule.intersect` to combine schedules together so that they only recur when all of them are satisfied.
+
+#### Built-in Solution
+
+```ts
+const cron = Cron.parse("0 0 1 * *").pipe(Either.getOrThrow);
+const schedule = Schedule.cron(cron);
+```
+
+Effect has a `Cron` module that has a fully defined `Cron` type and a `parse` function to parse a cron string. Then we can use `Schedule.cron` to create a schedule from the cron.
+
 ### Exercise 2
 
 ```ts
@@ -306,4 +339,4 @@ const finalSchedule = linearScedule.pipe(
 );
 ```
 
-Using `Schedule.andThen` we can compose schedules together.
+Using `Schedule.andThen` we can compose schedules together sequentially.
