@@ -136,6 +136,8 @@ layout: fact
 Effect can be quite overwhelming, you go to the api reference site and start scrolling, and then you dont stop scrolling
 Theres a lot, but what I want to do my best to make sure you understand right now at the start is that the learning curve is quite gentle. There are many modules and functions that you could go years using Effect and never touch.
 
+Youd be surprised by how many little functions I didnt know existed and learned just by putting together this workshop
+
 And to get started, you really only need to understand a few core concepts
 Today I'm gonna do my best to give you a good understanding of those core concepts, and some little dips of some of the other stuff
  -->
