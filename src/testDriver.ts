@@ -60,8 +60,10 @@ const testRunAssert = (
   effect: Effect.Effect<void, any, Test>,
   expected: {
     logs?: Array<unknown>;
-    success?: unknown | ((output: unknown) => boolean);
-    failure?: unknown | ((output: unknown) => boolean);
+    success?: unknown;
+    successIs?: (output: unknown) => boolean;
+    failure?: unknown;
+    failureIs?: (output: unknown) => boolean;
   }
 ) =>
   pipe(
@@ -71,8 +73,8 @@ const testRunAssert = (
     Effect.tapBoth({
       onSuccess: (value) =>
         Effect.sync(() => {
-          if (typeof expected.success === "function") {
-            assert(expected.success(value));
+          if (expected.successIs) {
+            assert(expected.successIs(value));
           } else {
             expected.success && assert.deepStrictEqual(value, expected.success);
           }
@@ -80,8 +82,8 @@ const testRunAssert = (
         }),
       onFailure: (error) =>
         Effect.sync(() => {
-          if (typeof expected.failure === "function") {
-            assert(expected.failure(error));
+          if (expected.failureIs) {
+            assert(expected.failureIs(error));
           } else {
             expected.failure && assert.deepStrictEqual(error, expected.failure);
           }

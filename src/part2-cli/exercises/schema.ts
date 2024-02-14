@@ -73,13 +73,13 @@ const testTwo = S.decode(HttpsURL)(badInput);
 const testThree = S.decode(HttpsURL)(reallyBadInput);
 
 await T.testRunAssert(1, testOne, {
-  success: (url: unknown) => url instanceof URL,
+  successIs: (url) => url instanceof URL,
 });
 
 await T.testRunAssert(2, testTwo, {
-  failure: (error: unknown) => error instanceof ParseError,
+  failureIs: (error) => error instanceof ParseError,
 });
 
 await T.testRunAssert(3, testThree, {
-  failure: (error: unknown) => error instanceof ParseError,
+  failureIs: (error) => error instanceof ParseError,
 });
