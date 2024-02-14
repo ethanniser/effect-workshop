@@ -659,13 +659,29 @@ PLEASE DONT DO THIS, why...
 
 # Runtime and FiberRefs
 
+- A `Runtime<R>` is a thing that can run an `Effect` to an `Exit`
+- Has a `Context` of services that can be seeded with some initial services (the `R`)
+- `FiberRef` is a mutable value that is local to a fiber (runtimes start with a bunch of built in ones but you can create your own)
+- Defined 'fork' and 'merge' semantics
+- `RuntimeFlags` ultra low level bitflags for controlling runtime behavior
+
 ---
 
 # Telemetry and Observability
 
+- Effect has first class support for OpenTelemetry
+- Spans, Traces, and Metrics are just as composable as the rest of Effect
+- If you know you need this, it should be pretty exciting
+- And if not, you'll be thankful for how easy it is to add later on
+
 ---
 
 # RPC
+
+- Network calls as easy as calling a function
+- Full client-server typesafey
+- Customizable serialization and deserialization with `Schema`
+- Built in HTTP adapter, but can be swapped out for anything
 
 ---
 

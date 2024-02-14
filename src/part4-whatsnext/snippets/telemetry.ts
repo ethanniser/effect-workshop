@@ -63,3 +63,7 @@ const effect5 = Effect.unit.pipe(
 );
 
 runLogTelemetry(effect5);
+
+// These are really poor examples of the power of OpenTelemetry, and effect's integration with it
+// But if you know you need this, hopefully this is enough of an introduction so that
+// you are aware it exists and can look into it further how it can suit your needs
