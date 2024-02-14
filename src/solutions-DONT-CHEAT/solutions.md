@@ -150,8 +150,10 @@ class Transaction implements Equal.Equal, Hash.Hash {
   }
 
   [Hash.symbol]() {
-    return Hash.combine(Hash.string(this.id))(
-      Hash.combine(Hash.number(this.amount))(Hash.number(this.time.getTime()))
+    return pipe(
+      Hash.string(this.id),
+      Hash.combine(Hash.number(this.amount)),
+      Hash.combine(Hash.number(this.time.getTime()))
     );
   }
 }
@@ -280,3 +282,28 @@ const testTwo = Stream.changes(powersOfTwo);
 Pretty self-explanatory, useful for when you want to keep track of changes in a stream.
 
 ## Schedule
+
+### Exercise 2
+
+```ts
+const linearScedule = Schedule.linear("25 millis").pipe(
+  Schedule.repetitions,
+  Schedule.whileOutput((x) => x < 3)
+);
+
+const exponentialSchedule = Schedule.exponential("100 millis", 2).pipe(
+  Schedule.whileOutput((x) => Duration.lessThan(x, Duration.seconds(1)))
+);
+
+const fixedSchedule = Schedule.fixed("1 seconds").pipe(
+  Schedule.whileInput<number>((x) => x % 27 !== 0),
+  Schedule.tapInput((x) => Effect.log(`IM DIVISBLE BY 27 - ${x}`))
+);
+
+const finalSchedule = linearScedule.pipe(
+  Schedule.andThen(exponentialSchedule),
+  Schedule.andThen(fixedSchedule)
+);
+```
+
+Using `Schedule.andThen` we can compose schedules together.
