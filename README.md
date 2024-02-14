@@ -1,5 +1,12 @@
 # effect-workshop
 
+## USEFUL LINKS
+
+- [Effect API Docs](https://effect-ts.github.io/effect/)
+- [Effect Docs](https://effect.website/)
+- [Effect Source](https://github.com/Effect-TS/effect)
+- [Effect Discord](https://discord.gg/effect-ts)
+
 ## REQUIREMENTS:
 
 ### A way to run typescript Node (with ts-node or tsx) or Bun
