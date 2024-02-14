@@ -60,8 +60,8 @@ const testRunAssert = (
   effect: Effect.Effect<void, any, Test>,
   expected: {
     logs?: Array<unknown>;
-    success?: unknown;
-    failure?: unknown;
+    success?: unknown | ((output: unknown) => boolean);
+    failure?: unknown | ((output: unknown) => boolean);
   }
 ) =>
   pipe(
@@ -71,12 +71,20 @@ const testRunAssert = (
     Effect.tapBoth({
       onSuccess: (value) =>
         Effect.sync(() => {
-          expected.success && assert.deepStrictEqual(value, expected.success);
+          if (typeof expected.success === "function") {
+            assert(expected.success(value));
+          } else {
+            expected.success && assert.deepStrictEqual(value, expected.success);
+          }
           expected.failure && assert.fail("Expected failure but got success");
         }),
       onFailure: (error) =>
         Effect.sync(() => {
-          expected.failure && assert.deepStrictEqual(error, expected.failure);
+          if (typeof expected.failure === "function") {
+            assert(expected.failure(error));
+          } else {
+            expected.failure && assert.deepStrictEqual(error, expected.failure);
+          }
           expected.success && assert.fail("Expected success but got failure");
         }),
     }), // again defect on purpose
