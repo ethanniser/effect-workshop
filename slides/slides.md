@@ -598,9 +598,14 @@ PLEASE DONT DO THIS, why...
 
 ---
 
----
-
 # Config
+
+- Reads config values from a string key to some validated type
+- Can be mapped, filtered, etc.
+- Any `Config` can be used just like an effect to get the value or a `ConfigError`
+- Swappable backend with `ConfigProvider`
+
+---
 
 # Part 3: Rewriting a Web Server
 
