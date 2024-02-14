@@ -639,13 +639,20 @@ PLEASE DONT DO THIS, why...
 
 # STM
 
+- `STM` is its own little `Effect`-like world, has most of the same combinators as Effects
+- Inside an `STM` there should be **no side effects**, only logic and operating on STM data structures
+- Custom `T_` versions of most common data structures
+- `commit`ing an stm transaction executes it in a single opaque operation
+- Either all operations go through sucessfully, or the data remains in its original state
+- Requires the data inside `T_` data structures to be **immutable**
+
 ---
 
 # Runtime and FiberRefs
 
 ---
 
-# Telemtry and Observability
+# Telemetry and Observability
 
 ---
 
@@ -654,3 +661,9 @@ PLEASE DONT DO THIS, why...
 ---
 
 # Batching and Caching
+
+- Define `Request`s and `RequestResolver`s for those `Request`s
+- Execute request using `Effect.request`
+- If a request can support batching, a special resolver can be used
+- When batching is enabled, effects will wait to see if any other effects also wait on the same request and batch together
+- Requests can easily be cached with a custom capcaity and TTL
