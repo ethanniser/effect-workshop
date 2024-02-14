@@ -21,6 +21,9 @@ import { Console, Effect, STM, TRef, pipe } from "effect";
 // STM is like writing in the effect style, with tracked errors and dependencies but with this same guarantee.
 // But now with the additional guarantee that if there is a failure, the whole transaction is rolled back.
 
+// Technically 'rolled back' is not the right term, because the transaction is not actually run until it is committed
+// so its more like all of the queued up operations are just thrown away.
+
 // STM doesnt work on any state, but effect provides `T_` variants of many of its data types
 // the core of these is `TRef` which is a transactional reference to a value.
 
