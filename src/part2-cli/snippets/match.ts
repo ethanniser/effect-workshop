@@ -79,6 +79,9 @@ const match7 = Match.type<Input>().pipe(
 
 const result2 = match7(input);
 
+// In the case where your match truly is exhaustive, but this cannot be asserted on a type level
+// you can use `Match.orElseAbsurd` which throws an error if no match is found
+
 // Match.option provides an option, which is `None` if no match is found
 
 const match8 = Match.type<Input>().pipe(
