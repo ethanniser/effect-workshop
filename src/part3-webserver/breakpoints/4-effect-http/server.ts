@@ -1,6 +1,7 @@
 import { createServer } from "http";
 import { Config, Context, Effect, Layer } from "effect";
 import * as M from "./model";
+import * as C from "./config";
 import { WebSocketServer } from "ws";
 
 export class HttpServer extends Context.Tag("HttpServer")<
@@ -29,9 +30,7 @@ export class CurrentConnections extends Context.Tag("CurrentConnections")<
 
 export const ListenLive = Layer.effectDiscard(
   Effect.gen(function* (_) {
-    const port = yield* _(
-      Config.integer("PORT").pipe(Config.withDefault(3000))
-    );
+    const port = yield* _(C.PORT);
     const server = yield* _(HttpServer);
     const currentConnections = yield* _(CurrentConnections);
     yield* _(

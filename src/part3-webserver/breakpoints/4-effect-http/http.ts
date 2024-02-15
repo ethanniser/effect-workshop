@@ -1,25 +1,34 @@
 import { Effect, Layer } from "effect";
 import { HttpServer, getAvailableColors } from "./server";
 import * as M from "./model";
+import * as C from "./config";
+import * as Http from "@effect/platform/HttpServer";
+import { NodeHttpServer } from "@effect/platform-node";
 
-export const Live = Layer.effectDiscard(
-  Effect.gen(function* (_) {
-    const http = yield* _(HttpServer);
-    const availableColors = yield* _(getAvailableColors);
-
-    http.on("request", (req, res) => {
-      if (req.url !== "/colors") {
-        res.writeHead(404);
-        res.end("Not Found");
-        return;
-      }
-
-      const message: M.AvailableColorsResponse = {
-        _tag: "availableColors",
-        colors: availableColors,
-      };
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(message));
-    });
-  })
+const HTTPServerLive = Layer.scoped(
+  Http.server.Server,
+  HttpServer.pipe(
+    Effect.zip(C.PORT),
+    Effect.flatMap(([server, port]) =>
+      NodeHttpServer.server.make(() => server, { port })
+    )
+  )
 );
+
+export const Live = Http.router.empty
+  .pipe(
+    Http.router.get(
+      "/colors",
+      Effect.gen(function* (_) {
+        const availableColors = yield* _(getAvailableColors);
+        return yield* _(
+          Http.response.schemaJson(M.AvailableColorsResponse)({
+            _tag: "availableColors",
+            colors: availableColors,
+          })
+        );
+      })
+    ),
+    Http.server.serve(Http.middleware.logger)
+  )
+  .pipe(Layer.provide(HTTPServerLive));

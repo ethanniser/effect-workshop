@@ -13,3 +13,9 @@
 - `http.ts` defines a single `Live` layer that attaches a 'request' listener to the http server
 - `ws.ts` defines a single `Live` layer that attaches a 'connection' listener to the ws server
 - `index.ts` merges the http + ws lives, then merges with the final 'listen' layer, then provides lives and launches
+
+## 3 -> 4 - Effect platform http
+
+- Move port config to `config.ts`
+- Write effect `Server` layer from the http server layer
+- Move old manual http to effect http server
