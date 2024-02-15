@@ -568,6 +568,10 @@ PLEASE DONT DO THIS, why...
 
 ---
 
+```yaml
+layout: section
+```
+
 # Part 2: Rewriting a CLI app
 
 ---
@@ -607,6 +611,10 @@ PLEASE DONT DO THIS, why...
 
 ---
 
+```yaml
+layout: section
+```
+
 # Part 3: Rewriting a Web Server
 
 ---
@@ -638,11 +646,94 @@ PLEASE DONT DO THIS, why...
 
 ---
 
-# Part 4: Peek into 'advanced' Effect
+```yaml
+layout: section
+```
+
+# Part 4: Peek into 'Advanced' Effect
 
 ---
 
 # Concurrency and Fibers
+
+<v-click>
+
+```ts
+const normalJS = () => {
+  let i = 0;
+  setInterval(() => console.log("i", i), 250);
+  while (true) {
+    i++;
+  }
+};
+```
+
+Why doesn't this work?
+</v-click>
+
+---
+
+```ts
+const effect = Effect.gen(function* (_) {
+  let i = 0;
+  yield* _(
+    Effect.suspend(() => Console.log("i", i)),
+    Effect.repeat(Schedule.spaced(250)),
+    Effect.fork
+  );
+
+  while (true) {
+    yield* _(Effect.sync(() => i++));
+  }
+});
+```
+
+---
+
+<div class="w-full h-full grid grid-cols-2 space-x-5">
+  <div>
+    <h1>Cooperative Multitasking</h1>
+    <ul>
+      <li v-click="1">How Javascript's event loop works</li>
+      <li v-click="2">
+        The main thread must first yield control before other tasks can run
+      </li>
+      <li v-click="3">Whether that's the stack being empty, or awaiting a promise</li>
+      <li v-click="4">Tasks are litterally just a callback in a queue</li>
+    </ul>
+  </div>
+  <div>
+    <h1>Preemptive Multitasking</h1>
+    <ul>
+      <li v-click="5">This is how operating systems work</li>
+      <li v-click="6">Tasks run as if they are the only thing running</li>
+      <li v-click="7">
+        A scheduler decides when to pause a task and run another
+      </li>
+      <li v-click="8">Tasks can be paused and resumed at any time</li>
+      <li v-click="9">Tasks are thread-like things with their own stack</li>
+    </ul>
+  </div>
+</div>
+
+---
+
+# Effect's Fiber Model
+
+- Fibers (or green threads) are a lightweight in memory thread
+- Fibers can be spawned in the thousands without issue
+- If an Effect is a description of a program, a Fiber is a running instance of that program
+- Fibers can be paused, restarted, 'awaited' to get their result, or interrupted to cancel them
+- Abstracts away sync vs async (to the fiber, everything is sync!)
+
+<!-- compare to os syscalls -->
+
+---
+
+# How is this possible?
+
+- Your os technically can't even stop your cpu it has to wait for a syscall or an interrupt
+- Same with Javascript, there is litterally no way to stop the main thread from whatever it is doing
 
 ---
 
