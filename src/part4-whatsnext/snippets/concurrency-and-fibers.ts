@@ -403,7 +403,7 @@ const boundedConcurrent = Effect.all(
 
 const externalControl = Effect.all(
   [logAfter(500), logAfter(1000), logAfter(1500), logAfter(2000)],
-  { concurrency: 2 }
+  { concurrency: "inherit" }
 ).pipe(Effect.withConcurrency(2));
 // could be done anywhere
 

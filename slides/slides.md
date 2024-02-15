@@ -734,6 +734,104 @@ const effect = Effect.gen(function* (_) {
 
 - Your os technically can't even stop your cpu it has to wait for a syscall or an interrupt
 - Same with Javascript, there is litterally no way to stop the main thread from whatever it is doing
+- But what if we broke our program down into little, lazy, steps
+- Then we could 'pause' execution by simply not executing the next step
+
+---
+
+```yaml
+layout: center
+```
+
+# DONT BLOCK THE EXECUTOR!
+
+(if you dont have to)
+
+---
+
+```ts
+const program = Effect.gen(function* (_) {
+  let i = 0;
+  yield* _(
+    Effect.suspend(() => Console.log("i", i)),
+    Effect.repeat(Schedule.spaced(250)),
+    Effect.fork
+  );
+
+  i = 100;
+});
+
+Effect.runPromise(program);
+```
+
+---
+
+# Structured Concurrency
+
+### Fibers have a parent-child relationship, and when a parent fiber completes or is interrupted, it will interrupt all of its children, and their children, and so on
+
+<img src="https://file.notion.so/f/f/749290db-832b-46fc-91ad-741641d4db48/65919d64-3461-4ca3-bff8-01bbacac3697/Untitled.png?id=c3cd9597-c583-4e3d-857e-24cb2b2f75b2&table=block&spaceId=749290db-832b-46fc-91ad-741641d4db48&expirationTimestamp=1708106400000&signature=YmLV6lzQl8FUj4nvMN5gBYnUCvyqIpF_gllOnyeKJ4c&downloadName=Untitled.png" />
+
+---
+
+```yaml
+layout: center
+```
+
+<img src="https://250bpm.com/blog:124/calltree.gif" />
+
+---
+
+# Consider the alternative (callbacks or global coroutines)
+
+- Functions aren't 'black boxes' anymore as they can 'leak' tasks
+- When a task errors, who is responible for that error?
+- If a task has resources, who makes sure those get cleaned up?
+
+---
+
+# Lots of parallels to memory management
+
+<img src="https://file.notion.so/f/f/749290db-832b-46fc-91ad-741641d4db48/69e3e5af-0b39-474d-b3fb-44c136329d8c/Untitled.png?id=9c9bc9dd-e306-4624-8454-37a2d506eaf6&table=block&spaceId=749290db-832b-46fc-91ad-741641d4db48&expirationTimestamp=1708106400000&signature=8BfJkMbEjsubjSWsXH1Yc36uGh8DW0tnnWkkk9BUhbQ&downloadName=Untitled.png" />
+
+---
+
+# Escape hatches if you need them
+
+- `forkScoped` spawns a fiber in the same scope as its parent
+- `forkDaemon` spawns a fiber in the top level, global scope
+- `forkIn` allows you specify a custom scope to spawn a fiber in with a `Scope`
+
+---
+
+# Fiber to Fiber communication
+
+- Arguable benefits over shared state
+- `Deferred` for 'one shot' channel that can error
+- `Queue` standard 'channel', customizable back pressure behavior
+- `PubSub` for 'publishing' to multiple 'subscribers'
+
+---
+
+# When do Fibers run?
+
+- After the current fiber yields
+
+---
+
+# Custom Schedulers
+
+- Just like everything else, the Scheduler that controls when fibers run is customizable
+- Web app: render fiber has priority, or scheduler tied to react render queue or `requestIdleCallback`
+- No good default for every case, yield too much and program becomes unnecessarily slow, yield too little and the program becomes unresponsive and uncooperative
+
+---
+
+# High Level Abstractions
+
+- Working with fibers directly is often not necessary
+- All combinators that operate on multiple effects have special 'concurrency' options
+- All the benefits of fibers + structred concurrency in a single line
 
 ---
 
