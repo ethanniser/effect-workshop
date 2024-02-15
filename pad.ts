@@ -1,6 +1,6 @@
-import { DevTools } from "@effect/experimental";
-import { Effect, Layer } from "effect";
+import { Console, Effect, Layer, pipe } from "effect";
 
-const program = Effect.sleep("1 seconds").pipe(Effect.withSpan("hi"));
+const one = Layer.effectDiscard(Console.log("one"));
+const two = Layer.effectDiscard(Console.log("two"));
 
-program.pipe(Effect.provide(DevTools.layer()), Effect.runFork);
+pipe(Layer.merge(one, two), Layer.launch, Effect.runPromise);
