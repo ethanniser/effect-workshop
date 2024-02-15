@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@effect/cli": "latest",
-    "@effect/experimental": "latest",
+    "@effect/experimental": "^0.9.13",
     "@effect/opentelemetry": "latest",
     "@effect/platform": "latest",
     "@effect/platform-browser": "latest",
