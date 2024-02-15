@@ -22,4 +22,6 @@
 
 ## 4 -> 5 - Ref and HashMap
 
-- Move from `Map` to effect's `HashMap`
+- `CurrentConnections` from `Map` to effect's `HashMap`
+- Wrap `CurrentConnections` in `Ref` to make it effectful
+- Update live + usage

@@ -1,5 +1,5 @@
 import { createServer } from "http";
-import { Config, Context, Effect, Layer } from "effect";
+import { HashMap, Ref, Context, Effect, Layer } from "effect";
 import * as M from "./model";
 import * as C from "./config";
 import { WebSocketServer } from "ws";
@@ -23,9 +23,12 @@ export class WSSServer extends Context.Tag("WSSServer")<
 
 export class CurrentConnections extends Context.Tag("CurrentConnections")<
   CurrentConnections,
-  Map<string, M.WebSocketConnection>
+  Ref.Ref<HashMap.HashMap<string, M.WebSocketConnection>>
 >() {
-  static readonly Live = Layer.sync(CurrentConnections, () => new Map());
+  static readonly Live = Layer.effect(
+    CurrentConnections,
+    Ref.make(HashMap.empty<string, M.WebSocketConnection>())
+  );
 }
 
 export const ListenLive = Layer.effectDiscard(
@@ -33,6 +36,7 @@ export const ListenLive = Layer.effectDiscard(
     const port = yield* _(C.PORT);
     const server = yield* _(HttpServer);
     const currentConnections = yield* _(CurrentConnections);
+    const connections = yield* _(Ref.get(currentConnections));
     yield* _(
       Effect.sync(() =>
         server.listen(port, () => console.log("Server started on port", port))
@@ -41,7 +45,7 @@ export const ListenLive = Layer.effectDiscard(
     yield* _(
       Effect.sync(() =>
         setInterval(() => {
-          console.log("Current connections:", currentConnections.size);
+          console.log("Current connections:", HashMap.size(connections));
         }, 1000)
       )
     );
@@ -50,11 +54,9 @@ export const ListenLive = Layer.effectDiscard(
 
 export const getAvailableColors = Effect.gen(function* (_) {
   const currentConnections = yield* _(CurrentConnections);
-  const currentColors = Array.from(currentConnections.values()).map(
-    (conn) => conn.color
+  const connections = yield* _(Ref.get(currentConnections));
+  const usedColors = Array.from(HashMap.values(connections)).map(
+    (_) => _.color
   );
-  const availableColors = M.colors.filter(
-    (color) => !currentColors.includes(color)
-  );
-  return availableColors;
+  return M.colors.filter((color) => !usedColors.includes(color));
 });
