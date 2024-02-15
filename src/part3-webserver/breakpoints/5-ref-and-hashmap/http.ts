@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect";
-import { HttpServer, getAvailableColors } from "./server";
+import { HttpServer, getAvailableColors } from "./shared";
 import * as M from "./model";
 import * as C from "./config";
 import * as Http from "@effect/platform/HttpServer";

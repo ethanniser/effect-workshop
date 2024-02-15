@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect";
-import { CurrentConnections, WSSServer } from "./server";
+import { CurrentConnections, WSSServer } from "./shared";
 import * as M from "./model";
 import * as S from "@effect/schema/Schema";
 

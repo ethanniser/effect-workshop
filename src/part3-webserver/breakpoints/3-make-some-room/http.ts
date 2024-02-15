@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect";
-import { HttpServer, getAvailableColors } from "./server";
+import { HttpServer, getAvailableColors } from "./shared";
 import * as M from "./model";
 
 export const Live = Layer.effectDiscard(
