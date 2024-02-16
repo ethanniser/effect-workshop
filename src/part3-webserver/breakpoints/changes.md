@@ -38,3 +38,10 @@
 - Question why doesnt work then add forks
 
 ## 6 -> 7 - Fibers
+
+- modify `WebSocketConnection` to have sendQueue and messages stream
+- `initializeConnection` now takes enqueue for broadcasting and dequeue for listening
+- creates broadcast fiber from messages stream and runs `Queue.offer(pubsub)` for each message
+- creates send fiber from stream made of fresh created queue and message dequeue and for each sends to raw ws
+- creates `WebSocketConnection` and adds to hashmap then joins on fibers
+- in main: create fiberset, pubsub and connections stream, run `initializeConnection` for each _forked_ and add to fiberset, run pubsub and connections interval then connection log fiber (also manual sending) and finally forkdaemon the whole thing

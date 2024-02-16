@@ -81,9 +81,11 @@ export interface WebSocketConnection {
   readonly name: string;
   readonly color: Color;
   readonly timeConnected: number;
-  readonly send: (
-    message: ServerOutgoingMessage
-  ) => Effect.Effect<void, ParseError>;
+  readonly messages: Stream.Stream<
+    ServerIncomingMessage,
+    UnknownIncomingMessageError
+  >;
+  readonly sendQueue: Queue.Enqueue<ServerOutgoingMessage>;
   readonly close: Effect.Effect<void>;
 }
 
