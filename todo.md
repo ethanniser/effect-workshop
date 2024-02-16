@@ -1,5 +1,8 @@
 - finish part 3 breakpoints - start building it out, realize we need fibers -> fibers lecture
 
+- move wss stuff into main effect and not layer so dont have to use forkDaemon for main fiber
+
+
 start with send just an effect? move to enqueue
 
 final:
