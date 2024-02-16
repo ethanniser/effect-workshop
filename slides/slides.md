@@ -798,8 +798,8 @@ layout: center
 
 # Escape hatches if you need them
 
-- `forkScoped` spawns a fiber in the same scope as its parent
 - `forkDaemon` spawns a fiber in the top level, global scope
+- `forkScoped` spawns a fiber and requires a `Scope` to be provided
 - `forkIn` allows you specify a custom scope to spawn a fiber in with a `Scope`
 
 ---

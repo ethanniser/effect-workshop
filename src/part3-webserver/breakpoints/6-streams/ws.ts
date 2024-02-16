@@ -11,10 +11,10 @@ import {
   Stream,
   pipe,
 } from "effect";
-import { CurrentConnections, WSSServer } from "./shared";
+import { CurrentConnections, WSSServer, getAvailableColors } from "./shared";
 import * as M from "./model";
 import * as S from "@effect/schema/Schema";
-import type { RawData, WebSocket, WebSocketServer } from "ws";
+import type { WebSocket, WebSocketServer } from "ws";
 import type { ParseError } from "@effect/schema/ParseResult";
 
 const createConnectionsStream = (wss: WebSocketServer) =>
@@ -33,7 +33,6 @@ const createConnectionsStream = (wss: WebSocketServer) =>
 const parseMessage = pipe(S.parseJson(M.ServerIncomingMessage), S.decode);
 
 const encodeMessage = pipe(S.parseJson(M.ServerOutgoingMessage), S.encode);
-// TODO: show unknown misuse and error
 
 const parseStartupMessage = pipe(S.parseJson(M.StartupMessage), S.decode);
 
@@ -50,10 +49,31 @@ const initializeConnection = (
         ws.once("message", (data) => {
           pipe(data.toString(), parseStartupMessage, emit);
         });
-      })
+      }),
+      Effect.mapError(
+        (parseError) =>
+          new M.BadStartupMessageError({
+            error: { _tag: "parseError", parseError },
+          })
+      ),
+      Effect.flatMap((message) =>
+        Effect.gen(function* (_) {
+          const availableColors = yield* _(getAvailableColors);
+          if (!availableColors.includes(message.color)) {
+            yield* _(
+              new M.BadStartupMessageError({
+                error: {
+                  _tag: "colorAlreadyTaken",
+                  color: message.color,
+                },
+              })
+            );
+          }
+          return message;
+        })
+      )
     );
 
-    // TODO! Check if the color is available and if the name is already taken
     yield* _(Console.log(`New connection: ${name} (${color})`));
     yield* _(publish({ _tag: "join", name, color }));
 
@@ -92,6 +112,9 @@ const initializeConnection = (
     const parsedMessagesStream = pipe(
       rawMessagesStream,
       Stream.mapEffect(parseMessage),
+      Stream.mapError(
+        (parseError) => new M.UnknownIncomingMessageError({ parseError })
+      ),
       Stream.map((message) => ({
         ...message,
         name,
@@ -102,10 +125,7 @@ const initializeConnection = (
       Stream.tapError((err) => Console.error(err))
     );
 
-    yield* _(
-      Stream.runForEach(parsedMessagesStream, publish),
-      Effect.forkDaemon
-    );
+    yield* _(Stream.runForEach(parsedMessagesStream, publish));
   });
 
 export const Live = Layer.effectDiscard(
@@ -129,14 +149,11 @@ export const Live = Layer.effectDiscard(
     const connectionsStream = createConnectionsStream(wss).pipe(
       Stream.tapError((err) => Console.error(err))
     );
-    // this fiber lives for the entire duration of the application
     yield* _(
       Stream.runForEach(connectionsStream, (ws) =>
         initializeConnection(ws, publish)
-      ),
-      Effect.forkDaemon
+      )
     );
-    // this fiber lives for the entire duration of the application
     yield* _(
       Effect.gen(function* (_) {
         const connections = yield* _(Ref.get(currentConnectionsRef));
@@ -144,8 +161,8 @@ export const Live = Layer.effectDiscard(
           Console.log(`Current connections: ${HashMap.size(connections)}`)
         );
       }),
-      Effect.repeat(Schedule.spaced("1 seconds")),
-      Effect.forkDaemon
+      Effect.repeat(Schedule.spaced("1 seconds"))
     );
+    // hmmmm why dont these work?
   })
 );

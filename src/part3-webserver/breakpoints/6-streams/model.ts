@@ -48,8 +48,7 @@ export type ServerIncomingMessage = S.Schema.To<typeof ServerIncomingMessage>;
 export class UnknownIncomingMessageError extends Data.TaggedError(
   "UnknownIncomingMessage"
 )<{
-  readonly rawMessage: string;
-  readonly parseError: ParseError;
+  readonly parseError: ParseError | Error;
 }> {}
 
 export class WebSocketError extends Data.TaggedError("WebSocketError")<{
