@@ -14,7 +14,7 @@ export const Live = Layer.effectDiscard(
         conn._rawWS.send(messageString);
       });
     }
-
+    // sneaky bug :)
     wss.on("connection", (ws: WebSocket) => {
       let connectionName: string;
 
