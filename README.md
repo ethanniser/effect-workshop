@@ -110,3 +110,7 @@ To run the part 3 project:
 ```bash
 bun run 3-p
 ```
+
+## Cheat Sheet
+
+For quick reference or for review feel free to read [CHEATSHEET.md](./CHEATSHEET.md)
