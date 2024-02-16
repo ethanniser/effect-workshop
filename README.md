@@ -75,6 +75,10 @@ If you get lost, you can always copy whatever 'breakpoint' you are on to the `pr
 
 Stands for 'scratchpad'. Pretty useful for just trying out some code that doesn't necessarily belong anywhere.
 
+```bash
+bun run pad
+```
+
 ## Running Files
 
 Every file is prefixed with a number. I have defined a bun of scripts so you don't have to type out the whole file name / path.

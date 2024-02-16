@@ -2,9 +2,6 @@
   "name": "cli",
   "module": "index.ts",
   "type": "module",
-  "scripts": {
-    "pad": "bun run pad.ts"
-  },
   "devDependencies": {
     "@types/bun": "latest"
   },
@@ -34,5 +31,42 @@
     "effect": "latest",
     "meow": "^13.1.0",
     "ws": "^8.16.0"
+  },
+  "scripts": {
+    "pad": "bun run src/pad.ts",
+    "1-s-1": "bun run src/part1-basics/snippets/1-what-is-a-program.js",
+    "1-s-2": "bun run src/part1-basics/snippets/2-are-functions-programs.js",
+    "1-s-3": "bun run src/part1-basics/snippets/3-functions-vs-effects.ts",
+    "1-s-4": "bun run src/part1-basics/snippets/4-creating-effects.ts",
+    "1-s-5": "bun run src/part1-basics/snippets/5-running-effects.ts",
+    "1-s-6": "bun run src/part1-basics/snippets/6-building-up-programs.ts",
+    "1-s-7": "bun run src/part1-basics/snippets/7-basic-error-handling.ts",
+    "1-s-8": "bun run src/part1-basics/snippets/8-basic-context-management.ts",
+    "1-s-9": "bun run src/part1-basics/snippets/9-basic-resource-management.ts",
+    "1-s-10": "bun run src/part1-basics/snippets/10-effect-datatypes.ts",
+    "1-e-1": "bun run src/part1-basics/exercises/1-errors.ts",
+    "1-e-2": "bun run src/part1-basics/exercises/2-context.ts",
+    "1-e-3": "bun run src/part1-basics/exercises/3-scope.ts",
+    "1-e-4": "bun run src/part1-basics/exercises/4-data.ts",
+    "2-s-1": "bun run src/part2-cli/snippets/1-schema.ts",
+    "2-s-2": "bun run src/part2-cli/snippets/2-config.ts",
+    "2-s-3": "bun run src/part2-cli/snippets/3-match.ts",
+    "2-e-1": "bun run src/part2-cli/exercises/1-schema.ts",
+    "2-p": "bun run src/part2-cli/project",
+    "2-b-1": "bun run src/part2-cli/breakpoints/1-original",
+    "2-b-2": "bun run src/part2-cli/breakpoints/2-dip-toes",
+    "2-b-3": "bun run src/part2-cli/breakpoints/3-typed-errors",
+    "3-p": "bun run src/part3-webserver/project",
+    "3-e-1": "bun run src/part3-webserver/exercises/1-schedule.ts",
+    "3-e-2": "bun run src/part3-webserver/exercises/2-stream.ts",
+    "3-s-1": "bun run src/part3-webserver/snippets/1-ref.ts",
+    "3-s-2": "bun run src/part3-webserver/snippets/2-schedule.ts",
+    "3-s-3": "bun run src/part3-webserver/snippets/3-stream.ts",
+    "4-s-1": "bun run src/part4-whatsnext/snippets/1-concurrency-and-fibers.ts",
+    "4-s-2": "bun run src/part4-whatsnext/snippets/2-stm.ts",
+    "4-s-3": "bun run src/part4-whatsnext/snippets/3-runtime-and-fiberrefs.ts",
+    "4-s-4": "bun run src/part4-whatsnext/snippets/4-telemetry.ts",
+    "4-s-5": "bun run src/part4-whatsnext/snippets/5-rpc.ts",
+    "4-s-6": "bun run src/part4-whatsnext/snippets/6-batching-and-caching.ts"
   }
 }
