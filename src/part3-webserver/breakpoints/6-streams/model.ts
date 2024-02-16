@@ -1,6 +1,6 @@
 import type { ParseError } from "@effect/schema/ParseResult";
 import * as S from "@effect/schema/Schema";
-import { Data, Stream } from "effect";
+import { Data, Effect, Fiber, Queue, Stream } from "effect";
 
 export const colors = [
   "red",
@@ -82,7 +82,10 @@ export interface WebSocketConnection {
   readonly name: string;
   readonly color: Color;
   readonly timeConnected: number;
-  readonly messages: Stream.Stream<ServerOutgoingMessage>;
+  readonly send: (
+    message: ServerOutgoingMessage
+  ) => Effect.Effect<void, ParseError>;
+  readonly close: Effect.Effect<void>;
 }
 
 export const AvailableColorsResponse = S.struct({
