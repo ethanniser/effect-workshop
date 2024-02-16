@@ -1,7 +1,62 @@
-import { Effect, HashMap, Layer, Option, Ref } from "effect";
+import {
+  Chunk,
+  Effect,
+  HashMap,
+  Layer,
+  Match,
+  Option,
+  Ref,
+  Stream,
+  pipe,
+} from "effect";
 import { CurrentConnections, WSSServer } from "./shared";
 import * as M from "./model";
 import * as S from "@effect/schema/Schema";
+import type { WebSocketServer } from "ws";
+
+const messagesStream = (wss: WebSocketServer) =>
+  Stream.asyncEffect<M.ServerOutgoingMessage, never, never>((emit) =>
+    Effect.gen(function* (_) {
+      wss.on("connection", (ws: WebSocket) => {
+        ws.on("message", (data) => {
+          const _ = Effect.gen(function* (_) {
+            const allMessagesSchema = S.union(
+              M.ServerIncomingMessage,
+              M.StartupMessage
+            );
+
+            const parse = S.parseJson(allMessagesSchema).pipe(S.decodeUnknown);
+            const message = yield* _(parse(data));
+            const __ = Match.value(message).pipe(
+              Match.tag("startup", (message) => ({
+                _tag: "join",
+                name: message.name,
+                color: message.color,
+              })),
+              Match.tag("message", (message) => ({
+                _tag: "message",
+                message: message.message,
+                timestamp: Date.now(),
+              })),
+              Match.exhaustive
+            );
+          });
+
+          ws.on("close", () => {
+            emit(
+              Effect.succeed(
+                Chunk.of({
+                  _tag: "leave",
+                  name: conn.value.name,
+                  color: conn.value.color,
+                })
+              )
+            );
+          });
+        });
+      });
+    })
+  );
 
 export const Live = Layer.effectDiscard(
   Effect.gen(function* (_) {
