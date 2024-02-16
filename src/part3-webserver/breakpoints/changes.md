@@ -19,6 +19,8 @@
 - Move port config to `config.ts`
 - Write effect `Server` layer from the http server layer
 - Move old manual http to effect http server
+- Remove old listen layer (effect http does this now)
+- Add new `StartMessage` layer in index.ts
 
 ## 4 -> 5 - Ref and HashMap
 

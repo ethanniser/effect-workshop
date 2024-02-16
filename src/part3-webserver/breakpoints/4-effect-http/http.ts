@@ -5,7 +5,7 @@ import * as C from "./config";
 import * as Http from "@effect/platform/HttpServer";
 import { NodeHttpServer } from "@effect/platform-node";
 
-const HTTPServerLive = Layer.scoped(
+export const HTTPServerLive = Layer.scoped(
   Http.server.Server,
   HttpServer.pipe(
     Effect.zip(C.PORT),
@@ -15,20 +15,18 @@ const HTTPServerLive = Layer.scoped(
   )
 );
 
-export const Live = Http.router.empty
-  .pipe(
-    Http.router.get(
-      "/colors",
-      Effect.gen(function* (_) {
-        const availableColors = yield* _(getAvailableColors);
-        return yield* _(
-          Http.response.schemaJson(M.AvailableColorsResponse)({
-            _tag: "availableColors",
-            colors: availableColors,
-          })
-        );
-      })
-    ),
-    Http.server.serve(Http.middleware.logger)
-  )
-  .pipe(Layer.provide(HTTPServerLive));
+export const Live = Http.router.empty.pipe(
+  Http.router.get(
+    "/colors",
+    Effect.gen(function* (_) {
+      const availableColors = yield* _(getAvailableColors);
+      return yield* _(
+        Http.response.schemaJson(M.AvailableColorsResponse)({
+          _tag: "availableColors",
+          colors: availableColors,
+        })
+      );
+    })
+  ),
+  Http.server.serve(Http.middleware.logger)
+);
