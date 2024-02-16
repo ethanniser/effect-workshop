@@ -25,3 +25,5 @@
 - `CurrentConnections` from `Map` to effect's `HashMap`
 - Wrap `CurrentConnections` in `Ref` to make it effectful
 - Update live + usage
+
+## 5 -> 6 - Streams
