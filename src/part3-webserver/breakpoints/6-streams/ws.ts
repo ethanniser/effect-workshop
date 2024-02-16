@@ -1,11 +1,13 @@
 import {
   Chunk,
+  Console,
   Effect,
   HashMap,
   Layer,
   Match,
   Option,
   Ref,
+  Schedule,
   Stream,
   pipe,
 } from "effect";
@@ -26,36 +28,33 @@ const createConnectionsStream = (wss: WebSocketServer) =>
     wss.on("close", () => {
       emit(Effect.fail(Option.none()));
     });
-  });
+  }).pipe(Stream.tap(() => Console.log("New connection")));
 
-const parseMessage = pipe(
-  S.parseJson(M.ServerIncomingMessage),
-  S.decodeUnknown
-);
+const parseMessage = pipe(S.parseJson(M.ServerIncomingMessage), S.decode);
 
 const encodeMessage = pipe(S.parseJson(M.ServerOutgoingMessage), S.encode);
+// TODO: show unknown misuse and error
 
-const parseStartupMessage = pipe(
-  S.parseJson(M.StartupMessage),
-  S.decodeUnknown
-);
+const parseStartupMessage = pipe(S.parseJson(M.StartupMessage), S.decode);
 
 const initializeConnection = (
   ws: WebSocket,
   publish: (message: M.ServerOutgoingMessage) => Effect.Effect<void>
 ) =>
   Effect.gen(function* (_) {
+    console.log("Initializing connection");
     const connectionsRef = yield* _(CurrentConnections);
 
     const { color, name } = yield* _(
       Effect.async<M.StartupMessage, ParseError>((emit) => {
         ws.once("message", (data) => {
-          pipe(data, parseStartupMessage, emit);
+          pipe(data.toString(), parseStartupMessage, emit);
         });
       })
     );
 
     // TODO! Check if the color is available and if the name is already taken
+    yield* _(Console.log(`New connection: ${name} (${color})`));
     yield* _(publish({ _tag: "join", name, color }));
 
     const connection: M.WebSocketConnection = {
@@ -78,9 +77,9 @@ const initializeConnection = (
       )
     );
 
-    const rawMessagesStream = Stream.async<RawData, Error>((emit) => {
+    const rawMessagesStream = Stream.async<string, Error>((emit) => {
       ws.on("message", (data) => {
-        emit(Effect.succeed(Chunk.of(data)));
+        emit(Effect.succeed(Chunk.of(data.toString())));
       });
       ws.on("error", (err) => {
         emit(Effect.fail(Option.some(err)));
@@ -99,93 +98,54 @@ const initializeConnection = (
         color,
         timestamp: Date.now(),
       })),
-      Stream.concat(Stream.make({ _tag: "leave", name, color } as const))
+      Stream.concat(Stream.make({ _tag: "leave", name, color } as const)),
+      Stream.tapError((err) => Console.error(err))
     );
 
-    yield* _(Stream.runForEach(parsedMessagesStream, publish));
+    yield* _(
+      Stream.runForEach(parsedMessagesStream, publish),
+      Effect.forkDaemon
+    );
   });
 
 export const Live = Layer.effectDiscard(
   Effect.gen(function* (_) {
     const wss = yield* _(WSSServer);
-    const currentConnections = yield* _(CurrentConnections);
-    const connections = yield* _(Ref.get(currentConnections));
-    function broadcastMessage(message: M.ServerOutgoingMessage) {
-      const messageString = JSON.stringify(message);
-      HashMap.forEach(connections, (conn) => {
-        conn._rawWS.send(messageString);
-      });
-    }
+    const currentConnectionsRef = yield* _(CurrentConnections);
+    const publish = (message: M.ServerOutgoingMessage) =>
+      Effect.gen(function* (_) {
+        console.log("Publishing message", message);
+        const connections = yield* _(Ref.get(currentConnectionsRef));
+        yield* _(
+          Effect.forEach(HashMap.values(connections), (conn) =>
+            conn.send(message)
+          )
+        );
+      }).pipe(
+        Effect.catchAll((err) => Console.error(err)),
+        Effect.asUnit
+      );
 
-    wss.on("connection", (ws: WebSocket) => {
-      let connectionName: string;
-
-      ws.on("message", (data) => {
-        try {
-          const message = JSON.parse(data.toString());
-          const parsedMessage = S.decodeUnknownSync(
-            S.union(M.ServerIncomingMessage, M.StartupMessage)
-          )(message);
-
-          switch (parsedMessage._tag) {
-            case "startup": {
-              const { color, name } = parsedMessage;
-              if (!M.colors.includes(color) || HashMap.has(connections, name)) {
-                ws.close(); // Close the connection if the color is not available or the name is already taken
-                return;
-              }
-
-              connectionName = name;
-              console.log(`New connection: ${name}`);
-
-              Ref.update(currentConnections, (connections) =>
-                HashMap.set(connections, name, {
-                  _rawWS: ws,
-                  name,
-                  color,
-                  timeConnected: Date.now(),
-                })
-              );
-              broadcastMessage({ _tag: "join", name, color });
-              break;
-            }
-            case "message": {
-              if (connectionName) {
-                const conn = HashMap.get(connections, connectionName);
-                if (Option.isSome(conn)) {
-                  broadcastMessage({
-                    _tag: "message",
-                    name: conn.value.name,
-                    color: conn.value.color,
-                    message: parsedMessage.message,
-                    timestamp: Date.now(),
-                  });
-                }
-              }
-              break;
-            }
-          }
-        } catch (err) {
-          console.error("Failed to process message:", err);
-        }
-      });
-
-      ws.on("close", () => {
-        if (connectionName) {
-          const conn = HashMap.get(connections, connectionName);
-          if (Option.isSome(conn)) {
-            broadcastMessage({
-              _tag: "leave",
-              name: conn.value.name,
-              color: conn.value.color,
-            });
-            Ref.update(currentConnections, (connections) =>
-              HashMap.remove(connections, connectionName)
-            );
-            console.log(`Connection closed: ${connectionName}`);
-          }
-        }
-      });
-    });
+    const connectionsStream = createConnectionsStream(wss).pipe(
+      Stream.tapError((err) => Console.error(err))
+    );
+    // this fiber lives for the entire duration of the application
+    yield* _(
+      Stream.runForEach(connectionsStream, (ws) =>
+        initializeConnection(ws, publish)
+      ),
+      Effect.forkDaemon
+    );
+    // this fiber lives for the entire duration of the application
+    yield* _(
+      Effect.gen(function* (_) {
+        const connections = yield* _(Ref.get(currentConnectionsRef));
+        yield* _(
+          Console.log(`Current connections: ${HashMap.size(connections)}`)
+        );
+      }),
+      Effect.repeat(Schedule.spaced("1 seconds")),
+      Effect.forkDaemon
+    );
   })
 );
