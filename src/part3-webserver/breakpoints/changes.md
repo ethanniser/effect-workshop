@@ -29,3 +29,12 @@
 - Update live + usage
 
 ## 5 -> 6 - Streams
+
+- modify `WebSocketConnection` to have send + close effect
+- implement connections stream
+- implement `initializeConnection`: listens for initial message with `async`, decodes + confirms no color conflict, then publishes join and puts connection in map, then listens for messages and publishes them
+- `publish` gets the ref and for each calls `send` on the connection
+- `Stream.runForEach(connectionsStream, initializeConnection)` + run connections interval
+- Question why doesnt work then add forks
+
+## 6 -> 7 - Fibers
