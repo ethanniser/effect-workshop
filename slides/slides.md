@@ -825,6 +825,10 @@ layout: center
 - Web app: render fiber has priority, or scheduler tied to react render queue or `requestIdleCallback`
 - No good default for every case, yield too much and program becomes unnecessarily slow, yield too little and the program becomes unresponsive and uncooperative
 
+<!--
+explain while true vs forever example
+ -->
+
 ---
 
 # High Level Abstractions

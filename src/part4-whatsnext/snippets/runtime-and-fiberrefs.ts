@@ -183,23 +183,5 @@ Effect.runFork(Scope.close(scope, Exit.unit));
 // So when we create a runtime, we have the oppurtunity to set the initial values of the `FiberRef`s
 // for 'main' fibers created by that runtime
 
-// one super important thing stored in a FiberRef is the `Scheduler`
-// the `Scheduler` determines if a fiber should yield, and if so, what 'task' should run next
-
-// a really powerful, but extremely low-level feature is the ability to customize the scheduler
-// for example if you have a web app, where you have different fibers for lots of various things,
-// and one main fiber responsible for rendering the UI
-// you could create a custom scheduler that gives the UI fiber priority over the others
-// to ensure that the UI is always responsive
-
-// people have made schedulers bound to react's render queue, or to requestIdleCallback
-
-// feel encouraged to experiment with your own schedulers
-// There is no good default for every case, yield too much and program becomes unnecessarily slow,
-// yield too little and the program becomes unresponsive and uncooperative
-
-// for reference, the default scheduler waits 2048 'ops' before allowing another fiber
-// and 2048 of those smaller microtask yields before waiting on a `setTimeout(0)` and allowing the event loop to run
-
 // finally, the `RuntimeFlags` is a number representing bitflags that control ultra low-level runtime behavior
 // check out the api docs for more info if you are interested

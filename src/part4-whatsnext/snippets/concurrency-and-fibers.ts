@@ -411,3 +411,25 @@ const externalControl = Effect.all(
 // Effect.runPromise(externalControl);
 
 // basically any api that involves multiple effects, can be run concurrently in this way
+
+// Finally a short note about scheduling
+// the `Scheduler` determines if a fiber should yield, and if so, what 'task' should run next
+
+// a really powerful, but extremely low-level feature is the ability to customize the scheduler
+// for example if you have a web app, where you have different fibers for lots of various things,
+// and one main fiber responsible for rendering the UI
+// you could create a custom scheduler that gives the UI fiber priority over the others
+// to ensure that the UI is always responsive
+
+// people have made schedulers bound to react's render queue, or to requestIdleCallback
+
+// feel encouraged to experiment with your own schedulers
+// There is no good default for every case, yield too much and program becomes unnecessarily slow,
+// yield too little and the program becomes unresponsive and uncooperative
+
+// for reference, the default scheduler waits 2048 'ops' before allowing another fiber
+// and 2048 of those smaller microtask yields before waiting on a `setTimeout(0)` and allowing the event loop to run
+
+// this explains the difference between while(true) and Effect.forever in the first example
+// the log is on a timeout, so the microtask yields dont allow it to run
+// Effect.forever has a built in Effect.yieldNow() which means more yields = faster non-microtask yields
