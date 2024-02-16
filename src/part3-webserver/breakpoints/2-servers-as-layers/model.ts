@@ -52,10 +52,6 @@ export class UnknownIncomingMessageError extends Data.TaggedError(
   readonly parseError: ParseError;
 }> {}
 
-export class WebSocketError extends Data.TaggedError("WebSocketError")<{
-  readonly error: Error;
-}> {}
-
 export const ServerOutgoingMessage = S.union(
   S.struct({
     _tag: S.literal("message"),
