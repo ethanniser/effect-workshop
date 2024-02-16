@@ -4,3 +4,5 @@
 - after fiber add note about alternate part 3 solution
 - scripts to fast run each file
 - explain in readme how things are broken up
+
+- write cheatsheet
