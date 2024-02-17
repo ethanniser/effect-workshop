@@ -114,3 +114,30 @@ bun run 3-p
 ## Cheat Sheet
 
 For quick reference or for review feel free to read [CHEATSHEET.md](./CHEATSHEET.md)
+
+## VSCode Snippets
+
+```json
+{
+  "Gen Function $": {
+    "prefix": "gg",
+    "body": ["function* (_) {\n\t$0\n}"],
+    "description": "Generator function with _ input"
+  },
+  "Gen Function $ (wrapped)": {
+    "prefix": "egg",
+    "body": ["Effect.gen(function* (_) {\n\t$0\n})"],
+    "description": "Generator function with _ input"
+  },
+  "Gen Yield $": {
+    "prefix": "yy",
+    "body": ["yield* _($0)"],
+    "description": "Yield generator calling _()"
+  },
+  "Gen Yield $ (const)": {
+    "prefix": "cyy",
+    "body": ["const $1 = yield* _($0)"],
+    "description": "Yield generator calling _()"
+  }
+}
+```

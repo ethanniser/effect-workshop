@@ -6,7 +6,7 @@ class Foo extends Context.Tag("Foo")<Foo, { readonly bar: string }>() {
 }
 
 // Exercise 1
-// `Tags` being a subtype of `Effect` is a bit too easy
+// `Tag` being a subtype of `Effect` is a bit too easy
 // Get the `Foo` service from context manually :)
 
 const test1 = Effect.gen(function* (_) {

@@ -116,7 +116,7 @@ declare const main: Effect.Effect<string, never, FeatureFlags>;
 
 // we can provide layers to an effect using the `Effect.provide` function
 // notice how this errors because we havent provided the ConfigFile layer to the FeatureFlags layer
-// const runnable2 = main.pipe(Effect.provide(FeatureFlags, FeatureFlagsLive));
+// const runnable2 = main.pipe(Effect.provide(FeatureFlagsLive));
 
 // finalLayer: Layer<FeatureFlags, Error, never>
 const finalLayer = Layer.provide(FeatureFlagsLive, ConfigFileLive);

@@ -49,7 +49,9 @@ const program = Effect.gen(function* (_) {
 
 // first `catchAll`
 
-const handled1 = errors.pipe(Effect.catchAll((e) => Effect.succeed("Handled")));
+const handled1 = errors.pipe(
+  Effect.catchAll((e) => Effect.succeed(`Handled ${e._tag}`))
+);
 
 // catch all takes a function that takes the error (whos type is whatever the effect can fail with)
 // and returns a new effect, either succeeding with a value, or failing with a new error
