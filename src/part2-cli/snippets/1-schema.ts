@@ -20,7 +20,7 @@ import { Effect } from "effect";
 // - validating that `unknown` data is of type `A`
 // - validating that `unknown` data is of type `I`
 // - encoding `A` to `I`
-// - decoding `I` to `R`
+// - decoding `I` to `A`
 
 // The `I = A` is important because of course not all validation requires a transformation.
 // So a `Schema<string>` is simply a schema that validates that the data is a string.
@@ -94,7 +94,7 @@ const _ = Effect.gen(function* (_) {
 
 // now for transformations
 // for `A` to `I` we use `encode*`
-// and for `I` to `R` we use `decode*`
+// and for `I` to `A` we use `decode*`
 
 // for both there are `unknown` versions that take `unknown` (`encodeUnknown*` and `decodeUnknown*`)
 // and first validate it matches the first schema before transforming

@@ -107,7 +107,7 @@ function main(url: string, options?: CLIOptions) {
 
     const finalString = buffer.join("\n");
     yield* _(
-      Effect.match(Option.fromNullable(options?.output), {
+      Effect.matchEffect(Option.fromNullable(options?.output), {
         onSuccess: (output) =>
           Effect.sync(() => Bun.write(output, finalString)),
         onFailure: () => Console.log(finalString),

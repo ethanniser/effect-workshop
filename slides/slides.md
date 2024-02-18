@@ -586,28 +586,21 @@ layout: section
 
 # Schema
 
-## A `Schema<A, I, R>` can:
+### A `Schema<A, I, R>` can:
 
 - validating that `unknown` data is of type `A`
 - validating that `unknown` data is of type `I`
 - encoding `A` to `I`
 - decoding `I` to `R`
 
-## `Schema` is incredibly powerful
+<br>
+
+### `Schema` is incredibly powerful
 
 - Can model basically any data structure
 - Filters
 - Transforms (can be effectful)
 - Pretty printing errors
-
----
-
-# Config
-
-- Reads config values from a string key to some validated type
-- Can be mapped, filtered, etc.
-- Any `Config` can be used just like an effect to get the value or a `ConfigError`
-- Swappable backend with `ConfigProvider`
 
 ---
 
@@ -643,6 +636,15 @@ layout: section
 - Has all the same properties as an `Effect`, most of the same combinators
 - Must be 'ran' to produce values
 - `Sink` type for more advanced and resuable consuming of streams
+
+---
+
+# Config
+
+- Reads config values from a string key to some validated type
+- Can be mapped, filtered, etc.
+- Any `Config` can be used just like an effect to get the value or a `ConfigError`
+- Swappable backend with `ConfigProvider`
 
 ---
 
