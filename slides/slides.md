@@ -613,6 +613,15 @@ layout: section
 
 ---
 
+# Config
+
+- Reads config values from a string key to some validated type
+- Can be mapped, filtered, etc.
+- Any `Config` can be used just like an effect to get the value or a `ConfigError`
+- Swappable backend with `ConfigProvider`
+
+---
+
 ```yaml
 layout: section
 ```
@@ -636,15 +645,6 @@ layout: section
 - Has all the same properties as an `Effect`, most of the same combinators
 - Must be 'ran' to produce values
 - `Sink` type for more advanced and resuable consuming of streams
-
----
-
-# Config
-
-- Reads config values from a string key to some validated type
-- Can be mapped, filtered, etc.
-- Any `Config` can be used just like an effect to get the value or a `ConfigError`
-- Swappable backend with `ConfigProvider`
 
 ---
 
