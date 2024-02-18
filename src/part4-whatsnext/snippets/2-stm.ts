@@ -75,7 +75,7 @@ const transfer = (
     const toBalance = yield* _(TRef.get(to.balance));
 
     if (fromBalance < amount) {
-      return yield* _(STM.fail(new InsufficientFundsError()));
+      yield* _(STM.fail(new InsufficientFundsError()));
     }
 
     yield* _(TRef.set(from.balance, fromBalance - amount));
