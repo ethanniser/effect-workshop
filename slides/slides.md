@@ -772,7 +772,7 @@ Effect.runPromise(program);
 
 ### Fibers have a parent-child relationship, and when a parent fiber completes or is interrupted, it will interrupt all of its children, and their children, and so on
 
-<img src="https://file.notion.so/f/f/749290db-832b-46fc-91ad-741641d4db48/65919d64-3461-4ca3-bff8-01bbacac3697/Untitled.png?id=c3cd9597-c583-4e3d-857e-24cb2b2f75b2&table=block&spaceId=749290db-832b-46fc-91ad-741641d4db48&expirationTimestamp=1708106400000&signature=YmLV6lzQl8FUj4nvMN5gBYnUCvyqIpF_gllOnyeKJ4c&downloadName=Untitled.png" />
+<img src="fork_join.png" />
 
 ---
 
@@ -780,7 +780,7 @@ Effect.runPromise(program);
 layout: center
 ```
 
-<img src="https://250bpm.com/blog:124/calltree.gif" />
+<img src="calltree.gif" />
 
 ---
 
@@ -794,7 +794,20 @@ layout: center
 
 # Lots of parallels to memory management
 
-<img src="https://file.notion.so/f/f/749290db-832b-46fc-91ad-741641d4db48/69e3e5af-0b39-474d-b3fb-44c136329d8c/Untitled.png?id=9c9bc9dd-e306-4624-8454-37a2d506eaf6&table=block&spaceId=749290db-832b-46fc-91ad-741641d4db48&expirationTimestamp=1708106400000&signature=8BfJkMbEjsubjSWsXH1Yc36uGh8DW0tnnWkkk9BUhbQ&downloadName=Untitled.png" />
+<img src="rust_popularity.png" />
+
+<!--
+This situation actually draws a lot of parallels to manually memory management in c or c++.
+You *should* be able to avoid any problems by just not messing up.
+But eventually you, or a dependency you use, will forget to free some memory,
+or free early leading to undefined behavior.
+
+I think the general consensus has settled that Rust’s structured memory management solution
+is something to pay attention to.
+
+Giving memory an ‘owner’ who represents when it will be freed is a powerful concept.
+What if we could apply this to concurrency tasks?
+-->
 
 ---
 
@@ -821,6 +834,14 @@ layout: center
 
 ---
 
+# High Level Abstractions
+
+- Working with fibers directly is often not necessary
+- All combinators that operate on multiple effects have special 'concurrency' options
+- All the benefits of fibers + structred concurrency in a single line
+
+---
+
 # Custom Schedulers
 
 - Just like everything else, the Scheduler that controls when fibers run is customizable
@@ -830,14 +851,6 @@ layout: center
 <!--
 explain while true vs forever example
  -->
-
----
-
-# High Level Abstractions
-
-- Working with fibers directly is often not necessary
-- All combinators that operate on multiple effects have special 'concurrency' options
-- All the benefits of fibers + structred concurrency in a single line
 
 ---
 
