@@ -66,7 +66,7 @@
     "4-s-2": "bun run src/part4-whatsnext/snippets/2-stm.ts",
     "4-s-3": "bun run src/part4-whatsnext/snippets/3-runtime-and-fiberrefs.ts",
     "4-s-4": "bun run src/part4-whatsnext/snippets/4-telemetry.ts",
-    "4-s-5": "bun run src/part4-whatsnext/snippets/5-rpc.ts",
-    "4-s-6": "bun run src/part4-whatsnext/snippets/6-batching-and-caching.ts"
+    "4-s-5": "bun run src/part4-whatsnext/snippets/5-batching-and-caching.ts",
+    "4-s-6": "bun run src/part4-whatsnext/snippets/6-rpc.ts"
   }
 }

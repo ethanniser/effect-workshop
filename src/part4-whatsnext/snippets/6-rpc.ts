@@ -18,22 +18,25 @@ import { createServer } from "node:http";
 // these are all defined by schemas, instead of types because
 // the schemas are used to serialize and deserialize the data over the network
 
-class Todo extends S.TaggedClass<Todo>()("Todo", {
+export class Todo extends S.TaggedClass<Todo>()("Todo", {
   id: S.number.pipe(S.int()),
   title: S.string,
   completed: S.boolean,
 }) {}
 
-class GetTodoError extends S.TaggedError<GetTodoError>()("GetTodoError", {}) {}
+export class GetTodoError extends S.TaggedError<GetTodoError>()(
+  "GetTodoError",
+  {}
+) {}
 
-class GetTodos extends Rpc.StreamRequest<GetTodos>()(
+export class GetTodos extends Rpc.StreamRequest<GetTodos>()(
   "GetTodos",
   GetTodoError,
   Todo,
   {}
 ) {}
 
-class GetTodoById extends S.TaggedRequest<GetTodoById>()(
+export class GetTodoById extends S.TaggedRequest<GetTodoById>()(
   "GetTodoById",
   GetTodoError,
   Todo,
@@ -56,7 +59,7 @@ const router = Router.make(
   )
 );
 
-type Router = typeof router;
+export type Router = typeof router;
 
 // you can implement the server in any way you want, but here we'll use the http router
 
@@ -67,7 +70,7 @@ const HttpLive = HttpServer.router.empty.pipe(
   Layer.provide(NodeHttpServer.server.layer(createServer, { port: 3000 }))
 );
 
-// Layer.launch(HttpLive).pipe(NodeRuntime.runMain);
+Layer.launch(HttpLive).pipe(NodeRuntime.runMain);
 
 // and finally we can create a client, again this can be done in any way you want
 // but here we'll use the http client
