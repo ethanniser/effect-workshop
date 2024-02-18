@@ -604,6 +604,15 @@ layout: section
 
 ---
 
+# Schedule
+
+- A `Schedule` is a description of a series of delays
+- Can be used for retrying on failure, or repeating on success
+- Have inputs (the output of an effect or another schedule) and outputs (depends on the schedule)
+- Very composable (like everything in effect!)
+
+---
+
 ```yaml
 layout: section
 ```
@@ -617,15 +626,6 @@ layout: section
 - A **mutable** reference to an **immutable** value
 - All actions are effectful
 - Useful for sharing state (there are other options if you do not want this)
-
----
-
-# Schedule
-
-- A `Schedule` is a description of a series of delays
-- Can be used for retrying on failure, or repeating on success
-- Have inputs (the output of an effect or another schedule) and outputs (depends on the schedule)
-- Very composable (like everything in effect!)
 
 ---
 
@@ -887,3 +887,20 @@ explain while true vs forever example
 - If a request can support batching, a special resolver can be used
 - When batching is enabled, effects will wait to see if any other effects also wait on the same request and batch together
 - Requests can easily be cached with a custom capcaity and TTL
+
+---
+
+# Performance
+
+- Obviously Effect has some overhead
+- Effect is made for **application** code, where the limitation is almost always IO anyway
+- Effect actually will likely **improve** the performance of these parts of your code because of its powerful concurrency primitives (structure concurrency, interruption, worker pool abstractions)
+- If you are writing CPU bound code, you could not use Effect and provide a effect wrapper, or maybe you shouldn't be using javascript at all
+
+---
+
+# Thanks for coming!
+
+- Slides and code will be available on my github
+- Feedback / Comments / Questions? Dm me on twitter @ethanniser
+- Come say hi to me tomorrow at the conference
