@@ -893,6 +893,15 @@ explain while true vs forever example
 
 ---
 
+# Performance
+
+- Obviously Effect has some overhead
+- Effect is made for **application** code, where the limitation is almost always IO anyway
+- Effect actually will likely **improve** the performance of these parts of your code because of its powerful concurrency primitives (structure concurrency, interruption, worker pool abstractions)
+- If you are writing CPU bound code, you could not use Effect and provide a effect wrapper, or maybe you shouldn't be using javascript at all
+
+---
+
 # Batching and Caching
 
 - Define `Request`s and `RequestResolver`s for those `Request`s
@@ -900,15 +909,6 @@ explain while true vs forever example
 - If a request can support batching, a special resolver can be used
 - When batching is enabled, effects will wait to see if any other effects also wait on the same request and batch together
 - Requests can easily be cached with a custom capcaity and TTL
-
----
-
-# Performance
-
-- Obviously Effect has some overhead
-- Effect is made for **application** code, where the limitation is almost always IO anyway
-- Effect actually will likely **improve** the performance of these parts of your code because of its powerful concurrency primitives (structure concurrency, interruption, worker pool abstractions)
-- If you are writing CPU bound code, you could not use Effect and provide a effect wrapper, or maybe you shouldn't be using javascript at all
 
 ---
 

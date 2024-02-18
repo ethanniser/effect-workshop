@@ -48,12 +48,6 @@ class Database extends Context.Tag("Database")<
     getUserById: (id: number) => Effect.Effect<string, Error>;
   }
 >() {
-  //   static Live = Layer.sync(Database, () => {
-  //     console.log("creating database");
-  //     return {
-  //       getUserById: (id: number) => Effect.succeed(`user ${id}`),
-  //     };
-  //   });
   static readonly Live = Layer.scoped(
     Database,
     Effect.acquireRelease(
