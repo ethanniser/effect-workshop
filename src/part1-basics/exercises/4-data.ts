@@ -25,6 +25,7 @@ assert(
 
 // Exercise 2
 // Create a datatype for a string that has been guaranteed to be only ascii
+// Here is a regex for you to use : /^[\x00-\x7F]*$/
 
 type ASCIIString = never;
 
