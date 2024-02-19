@@ -13,7 +13,7 @@ export const HTTPServerLive = Layer.scoped(
       NodeHttpServer.server.make(() => server, { port })
     )
   )
-);
+).pipe(Http.server.withLogAddress);
 
 export const Live = Http.router.empty.pipe(
   Http.router.get(
