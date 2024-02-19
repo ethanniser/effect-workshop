@@ -28,26 +28,6 @@ export class CurrentConnections extends Context.Tag("CurrentConnections")<
   static readonly Live = Layer.sync(CurrentConnections, () => new Map());
 }
 
-export const ListenLive = Layer.effectDiscard(
-  Effect.gen(function* (_) {
-    const port = yield* _(C.PORT);
-    const server = yield* _(HttpServer);
-    const currentConnections = yield* _(CurrentConnections);
-    yield* _(
-      Effect.sync(() =>
-        server.listen(port, () => console.log("Server started on port", port))
-      )
-    );
-    yield* _(
-      Effect.sync(() =>
-        setInterval(() => {
-          console.log("Current connections:", currentConnections.size);
-        }, 1000)
-      )
-    );
-  })
-);
-
 export const getAvailableColors = Effect.gen(function* (_) {
   const currentConnections = yield* _(CurrentConnections);
   const currentColors = Array.from(currentConnections.values()).map(
