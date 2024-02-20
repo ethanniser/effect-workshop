@@ -127,12 +127,12 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
   );
 
   // much better
-  // to help understand this consider the bash command `ls | grep .ts`
+  // to help understand this consider the bash command `ls | grep .json`
   // `ls` is itself a program that outputs some text
   // `grep` is a program that takes text and outputs a subset of it
   // the `|` operator is like `flatMap` in effect
   // it takes the output of the first program and feeds it into the second
-  // and the result, `ls | grep .ts` itself is a program that
+  // and the result, `ls | grep .json` itself is a program that
   // represents the entire sequence of operations
 }
 
