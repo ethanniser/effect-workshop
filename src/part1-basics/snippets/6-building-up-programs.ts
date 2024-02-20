@@ -32,7 +32,7 @@ class MyDate {
 }
 
 const program2 = () => new MyDate().double().toString().toUpperCase();
-console.log(program2());
+// console.log(program2());
 
 // ok well its easier to read, but what problems are there now?
 // lose composability because the functions are tied to the data
@@ -77,7 +77,6 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
   // to perform this transformation we can use `Effect.map`
 
   const doubleDate3 = Effect.map(getDate, (x) => double(x));
-  const _ = Effect.map((x: number) => double(x));
 
   // doubleDate3 is a new effect that is a program that represents:
   // 1. get the date
@@ -94,6 +93,8 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
 
   // and then to run it
   const result = Effect.runSync(program);
+
+  const _ = Effect.map((x: number) => double(x));
 }
 
 // through combinatiors like `map`, and others I will show you in a second
