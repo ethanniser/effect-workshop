@@ -95,6 +95,7 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
   const result = Effect.runSync(program);
 
   const _ = Effect.map((x: number) => double(x));
+  const __ = Effect.map((x: number) => x.toString())(getDate);
 }
 
 // through combinatiors like `map`, and others I will show you in a second
