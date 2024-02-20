@@ -5,3 +5,4 @@ dist
 index.html
 .remote-assets
 components.d.ts
+.vercel
