@@ -263,6 +263,18 @@ Finally, `S.compose` is used to compose two schemas together.
 
 ### Exercise 1
 
+```ts
+const stream = Stream.make(1, 2, 3, 4, 5).pipe(
+  Stream.tap((n) => Console.log("emitting", n))
+);
+
+const droppedStream = stream.pipe(Stream.drop(2));
+```
+
+The answer is 'B'. `Stream.drop` ignores the first `n` elements of a stream, but any side effects will still be executed.
+
+### Exercise 2
+
 #### With `Stream.asyncInterrupt`
 
 ```ts

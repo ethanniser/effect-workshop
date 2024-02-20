@@ -46,7 +46,7 @@ Stream.fromEffect(Effect.sync(() => Date.now()));
 // The key thing to remember is that those functions only resolve when the stream is complete.
 // So if you run an infinite stream, it will never resolve.
 // How do you do anything with an infinite stream then? You can use `Stream.take` to limit the number of values.
-// But really you do the processing not by 'running' the stream, but by 'transforming' the stream.
+// But really you do the processing the stream as it is emitted, not after it is complete.
 
 // consider this stream:
 const spacedInts = Stream.asyncInterrupt<number>((emit) => {
@@ -91,7 +91,7 @@ const two = Effect.gen(function* (_) {
   );
 });
 
-// Effect.runPromise(two);
+Effect.runPromise(two);
 
 // For customized cosumption of streams, there is the `Sink` type.
 // A `Sink<A, In, L, E, R>` describes a program that:
@@ -104,8 +104,18 @@ const sink1 = pipe(
   Effect.andThen((sum) => Console.log(sum))
 );
 
-Effect.runPromise(sink1);
+// Effect.runPromise(sink1);
 
 const sink2 = pipe(spacedInts, Stream.run(Sink.forEach((n) => Console.log(n))));
 
 // Effect.runPromise(sink2);
+
+// example of leftovers
+
+const sink3 = pipe(
+  spacedInts,
+  Stream.run(Sink.head().pipe(Sink.collectLeftover)),
+  Effect.andThen(([head, leftover]) => Console.log(head, leftover))
+);
+
+// Effect.runPromise(sink3);

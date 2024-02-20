@@ -234,5 +234,5 @@ export const Live = Layer.effectDiscard(
     yield* _(
       Fiber.join(Fiber.zip(initializeConnectionsFiber, connectionLogFiber))
     );
-  }).pipe(Effect.forkDaemon)
+  })
 );

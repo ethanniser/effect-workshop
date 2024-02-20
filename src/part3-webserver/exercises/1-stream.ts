@@ -1,8 +1,32 @@
-import { Chunk, Effect, Either, Option, Stream, identity } from "effect";
+import {
+  Chunk,
+  Console,
+  Effect,
+  Either,
+  Option,
+  Stream,
+  identity,
+} from "effect";
 import fs from "node:fs";
 import * as T from "../../testDriver";
-// from event emitter
+
 // Exercise 1
+
+const stream = Stream.make(1, 2, 3, 4, 5).pipe(
+  Stream.tap((n) => Console.log("emitting", n))
+);
+
+const droppedStream = stream.pipe(Stream.drop(2));
+
+Effect.runSync(Stream.runCollect(droppedStream));
+
+// What happens when we run the stream?
+
+// A. only 3,4,5 logged and end up in final chunk
+// B. all logged but only 3,4,5 end up in final chunk
+// C. all logged and all end up in final chunk
+
+// Exercise 2
 // fs.createReadStream returns a stream that emits 'open', 'data', 'end', 'error' and 'close' events.
 // Create a stream that emits the 'data' events, and fails with the 'error' event.
 // The fileStream should also be properly closed when the stream ends, fails or is interrupted.
@@ -22,8 +46,7 @@ await T.testRunAssert(
   }
 );
 
-// Exercise 2
-
+// Exercise 3
 // You are given this stream of repeating, but changing, numbers:
 
 const powersOfTwo = Stream.make(1, 1, 1, 1, 2, 2, 3, 3, 3, 5, 5, 5, 5, 7);
