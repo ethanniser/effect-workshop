@@ -24,7 +24,7 @@ Ethan Niser
 </div>
 
 <div class="abs-bl mx-14 my-12 flex flex-col space-y-4">
-  <img src="https://assets-global.website-files.com/65001a5c49ae13d89bb13849/659aaccb97095198128858fd_effect-days-white.svg" class="h-8">
+  <img src="/effect_days_logo.svg" class="h-8">
     <div class="text-sm opacity-50">Feb. 22nd, 2024</div>
 </div>
 
@@ -772,7 +772,7 @@ Effect.runPromise(program);
 
 ### Fibers have a parent-child relationship, and when a parent fiber completes or is interrupted, it will interrupt all of its children, and their children, and so on
 
-<img src="fork_join.png" />
+<img src="/fork_join.png" />
 
 ---
 
@@ -780,7 +780,7 @@ Effect.runPromise(program);
 layout: center
 ```
 
-<img src="calltree.gif" />
+<img src="/calltree.gif" />
 
 ---
 
@@ -794,7 +794,7 @@ layout: center
 
 # Lots of parallels to memory management
 
-<img src="rust_popularity.png" />
+<img src="/rust_popularity.png" />
 
 <!--
 This situation actually draws a lot of parallels to manually memory management in c or c++.
