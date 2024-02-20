@@ -15,8 +15,8 @@ const asyncProgram = Effect.promise(() => Promise.resolve(42));
 // just like functions, effects themselves are just values
 // they don't do anything until you 'run' them
 
-// console.log(sucessfulProgram);
-// console.log(failedProgram);
+console.log(sucessfulProgram);
+console.log(failedProgram);
 
 // to run effects that are purely synchronous, use runSync
 // it synchronously returns the result of the effect, or throws if the effect fails
@@ -52,4 +52,4 @@ const asyncProgram = Effect.promise(() => Promise.resolve(42));
 // provide a `Exit` type that represents either a success or a number of possible failure types
 
 const exit = Effect.runSyncExit(failedProgram);
-console.log("runSyncExit", exit);
+// console.log("runSyncExit", exit);
