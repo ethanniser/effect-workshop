@@ -177,6 +177,7 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
 
   const getDate = Effect.sync(() => Date.now());
   const yesterday = Effect.sync(() => Date.now() - 24 * 60 * 60 * 1000);
+  const both = Effect.all([getDate, yesterday]);
   const program4 = pipe(
     Effect.all([getDate, yesterday]),
     Effect.map(([x, y]) => x + y)
