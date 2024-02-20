@@ -126,6 +126,8 @@ but, and this is the much more likely path, if we are moving at a slower pace th
 - A way to run typescript (node or bun)
 - This repo (available from my github)
 
+## [https://github.com/ethanniser/effect-workshop](https://github.com/ethanniser/effect-workshop)
+
 ---
 
 ```yaml
