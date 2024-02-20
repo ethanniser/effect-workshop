@@ -86,7 +86,7 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
 
   // so we can recreate our program in effect like this:
   const program = pipe(
-    Effect.sync(() => Date.now()),
+    getDate,
     Effect.map((x) => x * 2),
     Effect.map((x) => x.toString()),
     Effect.map((x) => x.toUpperCase())
