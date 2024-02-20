@@ -39,7 +39,7 @@ Hovering to see types, autocompletion, and go-to-definition are gonna be pretty 
 
 ### Slides
 
-The slides are available online at [todo](todo)
+The slides are available online at [https://effect-workshop-slides.vercel.app](https://effect-workshop-slides.vercel.app)
 But, if you wish to run the slides locally:
 
 ```bash
