@@ -1,6 +1,7 @@
 import { Console, Effect, Layer, Option, pipe } from "effect";
 import meow from "meow";
 import * as M from "./model";
+import * as fs from "node:fs/promises";
 
 const parseCliOptions = () =>
   meow(
@@ -130,7 +131,8 @@ const main = Effect.gen(function* (_) {
   const finalString = buffer.join("\n");
   yield* _(
     Effect.match(Option.fromNullable(options.output), {
-      onSuccess: (output) => Effect.sync(() => Bun.write(output, finalString)),
+      onSuccess: (output) =>
+        Effect.promise(() => fs.writeFile(output, finalString)),
       onFailure: () => Console.log(finalString),
     })
   );

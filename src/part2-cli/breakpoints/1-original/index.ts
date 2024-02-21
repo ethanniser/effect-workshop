@@ -1,4 +1,5 @@
 import meow from "meow";
+import * as fs from "node:fs/promises";
 
 const cli = meow(
   `
@@ -100,7 +101,7 @@ async function main(url: string, options?: CLIOptions) {
 
   const finalString = buffer.join("\n");
   if (options?.output) {
-    Bun.write(options.output, finalString);
+    await fs.writeFile(options.output, finalString);
   } else {
     console.log(finalString);
   }

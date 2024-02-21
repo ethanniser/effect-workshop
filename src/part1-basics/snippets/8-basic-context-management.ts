@@ -1,4 +1,5 @@
 import { Effect, Context, Console, Layer, pipe } from "effect";
+import * as fs from "node:fs/promises";
 
 // An Effect's third type parameter reperesents the 'services' it requires before it can be run
 // Only an Effect that requires no services (i.e. `Effect<_, _, never>`) can be run
@@ -95,7 +96,7 @@ const ConfigFileLive = Layer.effect(
   Effect.gen(function* (_) {
     const contents = yield* _(
       Effect.tryPromise({
-        try: () => Bun.file("config.json").text(),
+        try: () => fs.readFile("config.json", "utf-8"),
         catch: (e) => new Error("Could not read config file"),
       })
     );

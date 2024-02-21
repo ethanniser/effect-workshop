@@ -1,6 +1,7 @@
 import { Console, Effect, Layer, Option, pipe } from "effect";
 import * as M from "./model";
 import * as S from "@effect/schema/Schema";
+import * as fs from "node:fs/promises";
 
 const StringPairsFromStrings = S.array(S.string).pipe(
   S.filter((arr) => arr.every((s) => s.split(": ").length === 2)),
@@ -133,7 +134,8 @@ const main = Effect.gen(function* (_) {
   const finalString = buffer.join("\n");
   yield* _(
     Effect.match(options.output, {
-      onSuccess: (output) => Effect.sync(() => Bun.write(output, finalString)),
+      onSuccess: (output) =>
+        Effect.promise(() => fs.writeFile(output, finalString)),
       onFailure: () => Console.log(finalString),
     })
   );

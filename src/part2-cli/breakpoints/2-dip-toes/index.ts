@@ -1,5 +1,6 @@
 import { Console, Effect, Option } from "effect";
 import meow from "meow";
+import * as fs from "node:fs/promises";
 
 const cli = meow(
   `
@@ -109,7 +110,7 @@ function main(url: string, options?: CLIOptions) {
     yield* _(
       Effect.matchEffect(Option.fromNullable(options?.output), {
         onSuccess: (output) =>
-          Effect.sync(() => Bun.write(output, finalString)),
+          Effect.tryPromise(() => fs.writeFile(output, finalString)),
         onFailure: () => Console.log(finalString),
       })
     );
