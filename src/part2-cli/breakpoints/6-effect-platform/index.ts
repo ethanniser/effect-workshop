@@ -146,7 +146,7 @@ const main = Effect.gen(function* (_) {
       onFailure: () => Console.log(finalString),
     })
   );
-});
+}).pipe(Effect.scoped);
 
 pipe(
   main,

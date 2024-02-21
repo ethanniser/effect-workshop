@@ -58,7 +58,7 @@ const main = Effect.gen(function* (_) {
       onFailure: () => Console.log(finalString),
     })
   );
-});
+}).pipe(Effect.scoped);
 
 const StringPairsFromStrings = S.array(S.string).pipe(
   S.filter((arr) => arr.every((s) => s.split(": ").length === 2)),
