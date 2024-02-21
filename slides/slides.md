@@ -626,6 +626,7 @@ layout: section
 
 - Fully featured cli app framework for effect
 - Composable and type safe args + options
+- Pre-built prompts (lists, select, toggle, confirm, etc...)
 - Help, wizard, and completions generation
 
 ---
