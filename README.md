@@ -67,7 +67,7 @@ For parts 2 and 3, we will be rewriting a non-effect application to effect. The 
 
 ##### `AFTER_THE_WORKSHOP.md`
 
-To reinforce your learning, I've provided some ideas for how to expand each project when you get home. Try them out on your own, and if you need help feel free to reach out to me on discord- I'd love to see how people approach each problem.
+To reinforce your learning, I've provided some ideas for how to expand each project when you get home. Try them out on your own, and if you need help feel free to @ me in the Effect discord- I'd love to see how people approach each problem.
 
 #### `breakpoints`
 

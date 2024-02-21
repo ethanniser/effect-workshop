@@ -1,5 +1,7 @@
 # Things you can try adding after the workshop to reinforce what you learned:
 
+_Having trouble or want to share your solution? @ me in the Effect discord!_
+
 1. Redirect Support
 
 - Make it either the default or an option to have the cli automatically resolve redirects

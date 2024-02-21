@@ -1,5 +1,7 @@
 # Things you can try adding after the workshop to reinforce what you learned:
 
+_Having trouble or want to share your solution? @ me in the Effect discord!_
+
 1. Implement the Client yourself
 
 - What can you reuse from the server code? What will you have to modify?
