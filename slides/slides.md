@@ -683,6 +683,13 @@ layout: section
 
 ---
 
+ <div class="flex items-center justify-center flex-col">
+ <h1>Remember...</h1>
+  <img src="/usage_vs_complexity.png" class="h-80"/>
+ </div>
+
+---
+
 # Concurrency and Fibers
 
 <v-click>
