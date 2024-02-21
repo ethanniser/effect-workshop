@@ -606,6 +606,21 @@ layout: section
 
 ---
 
+# `@effect/platform`
+
+- Platform _agnostic_ interfaces for common operations, with platform specific implementations
+- Covers: Http (client and server), workers, file system, spawning processes, key value store, file paths, clipboard, and more
+
+---
+
+# `@effect/cli`
+
+- Fully featured cli app framework for effect
+- Composable and type safe args + options
+- Help, wizard, and completions generation
+
+---
+
 # Schedule
 
 - A `Schedule` is a description of a series of delays
