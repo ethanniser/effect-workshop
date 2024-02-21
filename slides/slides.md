@@ -833,6 +833,7 @@ layout: center
 - Functions aren't 'black boxes' anymore as they can 'leak' tasks
 - When a task errors, who is responible for that error?
 - If a task has resources, who makes sure those get cleaned up?
+- How do you stop a task from the outside (you can't)
 
 </v-clicks>
 
