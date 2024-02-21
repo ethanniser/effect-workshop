@@ -41,7 +41,7 @@ const getAvailableColors = Effect.gen(function* (_) {
     Http.response.schemaBodyJson(M.AvailableColorsResponse)(response)
   );
   return colors.colors;
-});
+}).pipe(Effect.scoped);
 
 const rootCommand = Command.make("root", {}, () =>
   Effect.gen(function* (_) {
