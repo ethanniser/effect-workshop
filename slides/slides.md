@@ -936,6 +936,6 @@ explain while true vs forever example
 
 # Thanks for coming!
 
-- Slides and code will be available on my github
-- Feedback / Comments / Questions? Dm me on twitter @ethanniser
+- Slides and code will be available on my github- please do try the 'after the workshop' additional exercises
+- Feedback / Comments / Questions? Theres a feedback box on the way out. (or just dm me on twitter if your feeling a bit more direct)
 - Come say hi to me tomorrow at the conference
