@@ -65,6 +65,10 @@ _Solutions are located in the `solutions` folder_
 
 For parts 2 and 3, we will be rewriting a non-effect application to effect. The project folder contains the non-effect application, and is where if you want to follow along, you can modify the code to use effect.
 
+##### `AFTER_THE_WORKSHOP.md`
+
+To reinforce your learning, I've provided some ideas for how to expand each project when you get home. Try them out on your own, and if you need help feel free to reach out to me on discord- I'd love to see how people approach each problem.
+
 #### `breakpoints`
 
 For parts 2 & 3, 'breakpoints' defines each of the steps we will take to refactor the non-effect application to effect. Each file is a folder. All changes between steps are described in the `changes.md` file.
