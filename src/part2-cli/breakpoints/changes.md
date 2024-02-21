@@ -56,4 +56,3 @@
 - nested config
 - `Effect.retry` / `Effect.repeat`
 - basic schedules
-- exponential backoff

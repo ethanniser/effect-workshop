@@ -2,6 +2,8 @@
 
 _Having trouble or want to share your solution? @ me in the Effect discord!_
 
+## Not necessarily in any particular order:
+
 1. Implement the Client yourself
 
 - What can you reuse from the server code? What will you have to modify?
@@ -38,3 +40,7 @@ _Having trouble or want to share your solution? @ me in the Effect discord!_
 - Allow users to upload files
 - How are files send and distributed?
 - Are files stored somewhere? Where?
+
+8. Better Error Handling
+
+- Right now we're just logging errors. How can we improve this? Remember, all errors are fully typed, so use that to your advantage.
