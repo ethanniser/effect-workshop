@@ -148,6 +148,12 @@ Today I'm gonna do my best to give you a good understanding of those core concep
 
 ---
 
+ <div class="flex items-center justify-center">
+  <img src="/usage_vs_complexity.png" class="h-90"/>
+ </div>
+
+---
+
 ```yaml
 layout: center
 class: text-center
@@ -161,6 +167,9 @@ class: text-center
 Something that is really important today is interactivity. I've planned in spots for review problems and breakouts, but I want to make sure you all feel comfortable prompting the interaction as well.
 
  - If you have a question or comment at any time, please ask it
+
+
+** MIKE & OTHERS ARE HERE AS WELL**
 
 with that said, let's get started
 -->
