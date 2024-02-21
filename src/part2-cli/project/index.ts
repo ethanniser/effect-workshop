@@ -5,6 +5,7 @@ const cli = meow(
   `
 	Usage
 	  $ bend [...options] <url>
+    $ bend https://jsonplaceholder.typicode.com/todos/1
 
 	Options
 	  --method, -X  The HTTP method to use
