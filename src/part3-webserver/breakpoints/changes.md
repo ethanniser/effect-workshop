@@ -9,7 +9,7 @@
 
 ## 2 -> 3 - Making some room
 
-- More files! `shared.ts` defines the server tags and layers, then final 'listen' layer, the 'current connections' tag and the `getAvailableColors` function
+- More files! `shared.ts` defines the server tags and layers, then final 'listen' layer, the `currentConnections` tag and the `getAvailableColors` function
 - `http.ts` defines a single `Live` layer that attaches a 'request' listener to the http server
 - `ws.ts` defines a single `Live` layer that attaches a 'connection' listener to the ws server
 - `index.ts` merges the http + ws lives, then merges with the final 'listen' layer, then provides lives and launches
