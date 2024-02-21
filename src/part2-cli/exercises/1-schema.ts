@@ -52,7 +52,7 @@ type AllTests = AllTrue<[TestA, TestB, TestC, TestD, TestE]>;
 // Exercise 2
 
 // First write a schema that transforms a string to a `URL` (I've provide a URL schema for you)
-// consider how to handle the URL constructor throwing an error
+// if you can: consider how to handle the URL constructor throwing an error
 
 const URLSchema = S.declare((input): input is URL => input instanceof URL);
 
