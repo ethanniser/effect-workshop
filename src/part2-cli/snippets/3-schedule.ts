@@ -1,7 +1,7 @@
 import { Console, Effect, Schedule } from "effect";
 
 // A schedule is a value that describes the repition of an effectful operation.
-// The schedule type: `Schedule<Env, In, Out>`
+// The schedule type: `Schedule<Out, In = unknown, Env = never>`
 // Requires an environment `Env`, takes an input `In` and returns an output `Out`
 
 // Schedules can be used to either: repeat an effect that succeeds, or retry an effect that fails.

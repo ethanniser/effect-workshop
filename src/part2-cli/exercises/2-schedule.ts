@@ -12,7 +12,7 @@ function cronToSchedule({
   minutes,
   hours,
   days,
-}: Cron): Schedule.Schedule<unknown, unknown, unknown> {
+}: Cron): Schedule.Schedule<unknown> {
   return Schedule.forever;
 }
 
