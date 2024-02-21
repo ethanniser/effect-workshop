@@ -724,11 +724,15 @@ const effect = Effect.gen(function* (_) {
 
 # Effect's Fiber Model
 
+<v-clicks>
+
 - Fibers (or green threads) are a lightweight in memory thread
 - Fibers can be spawned in the thousands without issue
 - If an Effect is a description of a program, a Fiber is a running instance of that program
 - Fibers can be paused, restarted, 'awaited' to get their result, or interrupted to cancel them
 - Abstracts away sync vs async (to the fiber, everything is sync!)
+
+</v-clicks>
 
 <!-- compare to os syscalls -->
 
@@ -736,10 +740,14 @@ const effect = Effect.gen(function* (_) {
 
 # How is this possible?
 
+<v-clicks>
+
 - Your os technically can't even stop your cpu it has to wait for a syscall or an interrupt
 - Same with Javascript, there is litterally no way to stop the main thread from whatever it is doing
 - But what if we broke our program down into little, lazy, steps
 - Then we could 'pause' execution by simply not executing the next step
+
+</v-clicks>
 
 ---
 
@@ -788,9 +796,13 @@ layout: center
 
 # Consider the alternative (callbacks or global coroutines)
 
+<v-clicks>
+
 - Functions aren't 'black boxes' anymore as they can 'leak' tasks
 - When a task errors, who is responible for that error?
 - If a task has resources, who makes sure those get cleaned up?
+
+</v-clicks>
 
 ---
 
@@ -846,9 +858,13 @@ What if we could apply this to concurrency tasks?
 
 # Custom Schedulers
 
+<v-clicks>
+
 - Just like everything else, the Scheduler that controls when fibers run is customizable
 - Web app: render fiber has priority, or scheduler tied to react render queue or `requestIdleCallback`
 - No good default for every case, yield too much and program becomes unnecessarily slow, yield too little and the program becomes unresponsive and uncooperative
+
+</v-clicks>
 
 <!--
 explain while true vs forever example
@@ -895,15 +911,6 @@ explain while true vs forever example
 
 ---
 
-# Performance
-
-- Obviously Effect has some overhead
-- Effect is made for **application** code, where the limitation is almost always IO anyway
-- Effect actually will likely **improve** the performance of these parts of your code because of its powerful concurrency primitives (structure concurrency, interruption, worker pool abstractions)
-- If you are writing CPU bound code, you could not use Effect and provide a effect wrapper, or maybe you shouldn't be using javascript at all
-
----
-
 # Batching and Caching
 
 - Define `Request`s and `RequestResolver`s for those `Request`s
@@ -911,6 +918,19 @@ explain while true vs forever example
 - If a request can support batching, a special resolver can be used
 - When batching is enabled, effects will wait to see if any other effects also wait on the same request and batch together
 - Requests can easily be cached with a custom capcaity and TTL
+
+---
+
+# Performance
+
+<v-clicks>
+
+- Obviously Effect has some overhead
+- Effect is made for **application** code, where the limitation is almost always IO anyway
+- Effect actually will likely **improve** the performance of these parts of your code because of its powerful concurrency primitives (structure concurrency, interruption, worker pool abstractions)
+- If you are writing CPU bound code, you could not use Effect and provide a effect wrapper, or maybe you shouldn't be using javascript at all
+
+</v-clicks>
 
 ---
 
