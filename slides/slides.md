@@ -123,10 +123,16 @@ but, and this is the much more likely path, if we are moving at a slower pace th
 
 # What do you need?
 
+### [https://github.com/ethanniser/effect-workshop](https://github.com/ethanniser/effect-workshop)
+
+- Join the channel in the Effect discord (DM Mirela if you are not)
 - A way to run typescript (node or bun)
 - This repo (available from my github)
+- Opening in a github codespace (run `./start.sh`)
 
-## [https://github.com/ethanniser/effect-workshop](https://github.com/ethanniser/effect-workshop)
+<br>
+
+<img src="/codespace.png" class="h-32"/>
 
 ---
 
