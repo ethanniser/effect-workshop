@@ -16,11 +16,9 @@ await T.testRunAssert(1, testOne, { success: 5 });
 // Exercise 2
 // Instead of short circuiting on the first error, collect all errors and fail with an array of them
 
-let j = 0;
-const maybeFail = Effect.suspend(() =>
-  j++ % 2 === 0 ? Effect.fail(`odd ${j}`) : Effect.succeed(j)
-);
-const maybeFailArr = new Array(10).fill(0).map(() => maybeFail);
+const maybeFail = (j: number) =>
+  j % 2 !== 0 ? Effect.fail(`odd ${j}`) : Effect.succeed(j);
+const maybeFailArr = new Array(10).fill(0).map((_, i) => maybeFail(i + 1));
 
 const testTwo = Effect.all(maybeFailArr);
 
