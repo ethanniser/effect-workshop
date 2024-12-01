@@ -138,7 +138,7 @@ Effect.gen(function* (_) {
 | `catchAll`    | `Effect<A, E1, R>`, `E1 => Option<Effect<B, E2, R>>`                 | `Effect<A \| B, E1 \| E2, R>`              | Recovering from some errors           |
 | `either`      | `Effect<A, E, R>`                                                    | `Effect<Either<A, E>, never, R>`           | Move error into success 'channel'     |
 | `match`       | `Effect<A, E, R>`, `A => B`, `E => C`                                | `Effect<B \| C, never, R>`                 | Handle both cases at once             |
-| `matchEffect` | `Effect<A, E1, R>`, `A => Effect<B, E2, R>`, `A => Effect<C, E3, R>` | `Effect<B \| C, E2 \| E3, R>`              | Handle both cases with `Effect`s      |
+| `matchEffect` | `Effect<A, E1, R>`, `A => Effect<B, E2, R>`, `E1 => Effect<C, E3, R>` | `Effect<B \| C, E2 \| E3, R>`              | Handle both cases with `Effect`s      |
 
 ## Defining and Using Services
 
