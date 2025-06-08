@@ -28,18 +28,18 @@ An `Effect` is a immutable value which describes some program that may require s
 
 ## Creating Effects
 
-| **Function**            | **Input**                          | **Output**                    |
-| ----------------------- | ---------------------------------- | ----------------------------- |
-| `succeed`               | `A`                                | `Effect<A>`                   |
-| `fail`                  | `E`                                | `Effect<never, E>`            |
-| `sync`                  | `() => A`                          | `Effect<A>`                   |
-| `try`                   | `() => A`                          | `Effect<A, UnknownException>` |
-| `try` (overload)        | `() => A`, `unknown => E`          | `Effect<A, E>`                |
-| `promise`               | `() => Promise<A>`                 | `Effect<A>`                   |
-| `tryPromise`            | `() => Promise<A>`                 | `Effect<A, UnknownException>` |
-| `tryPromise` (overload) | `() => Promise<A>`, `unknown => E` | `Effect<A, E>`                |
-| `async`                 | `(Effect<A, E> => void) => void`   | `Effect<A, E>`                |
-| `suspend`               | `() => Effect<A, E, R>`            | `Effect<A, E, R>`             |
+| **Function** | **Input** | **Output** | **Description** |
+| ----------------------- | ---------------------------------- | ----------------------------- | -------------- |
+| [`succeed`](https://effect.website/docs/getting-started/creating-effects/#succeed) | `A` | `Effect<A>` | Creates an effect that succeeds with a value |
+| [`fail`](https://effect.website/docs/getting-started/creating-effects/#fail) | `E` | `Effect<never, E>` | Creates an effect that fails with an error |
+| [`sync`](https://effect.website/docs/getting-started/creating-effects/#sync) | `() => A` | `Effect<A>` | Creates an effect from a synchronous computation |
+| [`try`](https://effect.website/docs/getting-started/creating-effects/#try) | `() => A` | `Effect<A, UnknownException>` | Creates an effect from a synchronous computation that may throw |
+| [`try`](https://effect.website/docs/getting-started/creating-effects/#try) (overload) | `() => A`, `unknown => E` | `Effect<A, E>` | Creates an effect from a synchronous computation with custom error handling |
+| [`promise`](https://effect.website/docs/getting-started/creating-effects/#promise) | `() => Promise<A>` | `Effect<A>` | Creates an effect from a promise |
+| [`tryPromise`](https://effect.website/docs/getting-started/creating-effects/#trypromise) | `() => Promise<A>` | `Effect<A, UnknownException>` | Creates an effect from a promise that may reject |
+| [`tryPromise`](https://effect.website/docs/getting-started/creating-effects/#trypromise) (overload) | `() => Promise<A>`, `unknown => E` | `Effect<A, E>` | Creates an effect from a promise with custom error handling |
+| [`async`](https://effect.website/docs/getting-started/creating-effects/#async) | `(Effect<A, E> => void) => void` | `Effect<A, E>` | Creates an effect from an async callback |
+| [`suspend`](https://effect.website/docs/getting-started/creating-effects/#suspend) | `() => Effect<A, E, R>` | `Effect<A, E, R>` | Creates an effect that is lazily evaluated |
 
 NOTE: `sync` and `promise` are for functions that will **NEVER** throw/reject. If they do, it will be considered a 'defect' (similar to a panic).
 
@@ -48,23 +48,23 @@ NOTE: `sync` and `promise` are for functions that will **NEVER** throw/reject. I
 Effects must be 'run' to do anything.
 Effects should only be run **at the edges of your program**, when you must interact with the outside world or non-effect code. If you want to 'unwrap' the value from inside an effect without running it there are many combinators to do that.
 
-| **Function**     | **Input**      | **Output**                 |
-| ---------------- | -------------- | -------------------------- |
-| `runSync`        | `Effect<A, E>` | `A` (throws `E`)           |
-| `runPromise`     | `Effect<A, E>` | `Promise<A>` (rejects `E`) |
-| `runSyncExit`    | `Effect<A, E>` | `Exit<A, E>`               |
-| `runPromiseExit` | `Effect<A, E>` | `Promise<Exit<A, E>>`      |
+| **Function** | **Input** | **Output** | **Description** |
+| ---------------- | -------------- | -------------------------- | -------------- |
+| [`runSync`](https://effect.website/docs/getting-started/running-effects/#runsync) | `Effect<A, E>` | `A` (throws `E`) | Runs the effect synchronously |
+| [`runPromise`](https://effect.website/docs/getting-started/running-effects/#runpromise) | `Effect<A, E>` | `Promise<A>` (rejects `E`) | Runs the effect as a promise |
+| [`runSyncExit`](https://effect.website/docs/getting-started/running-effects/#runsyncexit) | `Effect<A, E>` | `Exit<A, E>` | Runs the effect synchronously and returns an Exit |
+| [`runPromiseExit`](https://effect.website/docs/getting-started/running-effects/#runpromiseexit) | `Effect<A, E>` | `Promise<Exit<A, E>>` | Runs the effect as a promise and returns an Exit |
 
 ## Composing Effects
 
 Combinators allow you to create new `Effect`s that operate on the reuslt of a previous `Effect` without 'running' it.
 
-| **Function** | **Input**                                 | **Output**                  |
-| ------------ | ----------------------------------------- | --------------------------- |
-| `map`        | `Effect<A, E, R>`, `A => B`               | `Effect<B, E, R>`           |
-| `flatMap`    | `Effect<A, E, R>`, `A => Effect<B, E, R>` | `Effect<B, E, R>`           |
-| `tap`        | `Effect<A, E, R>`, `A => Effect<B, E, R>` | `Effect<A, E, R>`           |
-| `all`        | `[Effect<A, E, R>, Effect<B, E, R>, ...]` | `Effect<[A, B, ...], E, R>` |
+| **Function** | **Input** | **Output** | **Description** |
+| ------------ | ----------------------------------------- | --------------------------- | -------------- |
+| [`map`](https://effect.website/docs/getting-started/building-pipelines/#map) | `Effect<A, E, R>`, `A => B` | `Effect<B, E, R>` | Transforms the success value |
+| [`flatMap`](https://effect.website/docs/getting-started/building-pipelines/#flatmap) | `Effect<A, E, R>`, `A => Effect<B, E, R>` | `Effect<B, E, R>` | Chains effects together |
+| [`tap`](https://effect.website/docs/getting-started/building-pipelines/#tap) | `Effect<A, E, R>`, `A => Effect<B, E, R>` | `Effect<A, E, R>` | Performs an effect but returns the original value |
+| [`all`](https://effect.website/docs/getting-started/building-pipelines/#all) | `[Effect<A, E, R>, Effect<B, E, R>, ...]` | `Effect<[A, B, ...], E, R>` | Combines multiple effects |
 
 ## `pipe` and `Effect.gen`
 
@@ -131,14 +131,14 @@ Effect.gen(function* () {
 
 ### Handling Expected Errors
 
-| **Function**  | **Input**                                                            | **Output**                                 | **Description**                       |
+| **Function** | **Input** | **Output** | **Description** |
 | ------------- | -------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------- |
-| `catchAll`    | `Effect<A, E1, R>`, `E1 => Effect<B, E2, R>`                         | `Effect<A \| B, E2, R>`                    | Recovering from all errors            |
-| `catchTag`    | `Effect<A, E, R>`, `string`, `TaggedError => Effect<B, E2, R>`       | `Effect<A \| B, Exclude<E, tag> \| E2, R>` | Recovering from specific tagged error |
-| `catchAll`    | `Effect<A, E1, R>`, `E1 => Option<Effect<B, E2, R>>`                 | `Effect<A \| B, E1 \| E2, R>`              | Recovering from some errors           |
-| `either`      | `Effect<A, E, R>`                                                    | `Effect<Either<A, E>, never, R>`           | Move error into success 'channel'     |
-| `match`       | `Effect<A, E, R>`, `A => B`, `E => C`                                | `Effect<B \| C, never, R>`                 | Handle both cases at once             |
-| `matchEffect` | `Effect<A, E1, R>`, `A => Effect<B, E2, R>`, `E1 => Effect<C, E3, R>` | `Effect<B \| C, E2 \| E3, R>`              | Handle both cases with `Effect`s      |
+| [`catchAll`](https://effect.website/docs/error-management/fallback/#catchall) | `Effect<A, E1, R>`, `E1 => Effect<B, E2, R>` | `Effect<A \| B, E2, R>` | Recovering from all errors |
+| [`catchTag`](https://effect.website/docs/error-management/fallback/#catchtag) | `Effect<A, E, R>`, `string`, `TaggedError => Effect<B, E2, R>` | `Effect<A \| B, Exclude<E, tag> \| E2, R>` | Recovering from specific tagged error |
+| [`catchAll`](https://effect.website/docs/error-management/fallback/#catchall) | `Effect<A, E1, R>`, `E1 => Option<Effect<B, E2, R>>` | `Effect<A \| B, E1 \| E2, R>` | Recovering from some errors |
+| [`either`](https://effect.website/docs/error-management/error-channel-operations/#either) | `Effect<A, E, R>` | `Effect<Either<A, E>, never, R>` | Move error into success 'channel' |
+| [`match`](https://effect.website/docs/error-management/matching/#match) | `Effect<A, E, R>`, `A => B`, `E => C` | `Effect<B \| C, never, R>` | Handle both cases at once |
+| [`matchEffect`](https://effect.website/docs/error-management/matching/#matcheffect) | `Effect<A, E1, R>`, `A => Effect<B, E2, R>`, `E1 => Effect<C, E3, R>` | `Effect<B \| C, E2 \| E3, R>` | Handle both cases with `Effect`s |
 
 ## Defining and Using Services
 
@@ -200,19 +200,19 @@ Effect.runPromise(main); // Type Error! Missing 'Scope' service
 Effect.runPromise(Effect.scoped(main)); // logs: contents \n file closed!
 ```
 
-| **Function**   | **Input**                                | **Output**                 | **Description**                                    |
+| **Function** | **Input** | **Output** | **Description** |
 | -------------- | ---------------------------------------- | -------------------------- | -------------------------------------------------- |
-| `scoped`       | `Effect<A, E, R \| Scope>`               | `Effect<A, E, R>`          | Defines where the current `Scope` should be closed |
-| `addFinalizer` | `Effect<A, E, R>`, `(exit) => Effect<_>` | `Effect<A, E, R \| Scope>` | Add a 'finalizer' to the current `Effect`          |
+| [`scoped`](https://effect.website/docs/resource-management/scope/#scoped) | `Effect<A, E, R \| Scope>` | `Effect<A, E, R>` | Defines where the current `Scope` should be closed |
+| [`addFinalizer`](https://effect.website/docs/resource-management/scope/#addfinalizer) | `Effect<A, E, R>`, `(exit) => Effect<_>` | `Effect<A, E, R \| Scope>` | Add a 'finalizer' to the current `Effect` |
 
 ## Repitition + Retry
 
 A `Schedule` defines a scheduled pattern for executing effects. There are many constructors + combinators, so check out the docs.
 
-| **Function** | **Input**                     | **Output**        | **Description**                                                        |
+| **Function** | **Input** | **Output** | **Description** |
 | ------------ | ----------------------------- | ----------------- | ---------------------------------------------------------------------- |
-| `repeat`     | `Effect<A, E, R>`, `Schedule` | `Effect<A, E, R>` | Repeats the `Effect` on success by the pattern defined by the schedule |
-| `retry`      | `Effect<A, E, R>`, `Schedule` | `Effect<A, E, R>` | Retrys the `Effect` on failure by the pattern defined by the schedule  |
+| [`repeat`](https://effect.website/docs/scheduling/repetition/#repeat) | `Effect<A, E, R>`, `Schedule` | `Effect<A, E, R>` | Repeats the `Effect` on success by the pattern defined by the schedule |
+| [`retry`](https://effect.website/docs/scheduling/repetition/#retry) | `Effect<A, E, R>`, `Schedule` | `Effect<A, E, R>` | Retrys the `Effect` on failure by the pattern defined by the schedule |
 
 ## "Traits"
 
