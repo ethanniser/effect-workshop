@@ -56,7 +56,7 @@ Each part has its own folder. Within those folders you find these folders:
 
 #### `snippets`
 
-This contains typescript files that have code examples and comment explanations for individual concepts. I will go through these files in the workshop. Free free to follow along and read the comments.
+This contains typescript files that have code examples and comment explanations for individual concepts. I will go through these files in the workshop. Feel free to follow along and read the comments.
 
 #### `exercises`
 
