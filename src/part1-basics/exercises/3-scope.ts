@@ -23,7 +23,7 @@ class MockFile {
     );
 }
 
-declare const file: (fd: number) => Effect.Effect<number, never, Scope.Scope>;
+declare const file: (fd: number) => Effect.Effect<MockFile, never, Scope.Scope>;
 
 const test1 = Effect.gen(function* () {
   const file1 = yield* file(1);
