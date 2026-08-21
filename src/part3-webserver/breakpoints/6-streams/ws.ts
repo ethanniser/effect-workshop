@@ -84,7 +84,7 @@ const initializeConnection = (
           const availableColors = yield* getAvailableColors;
 
           if (!availableColors.includes(message.color)) {
-            yield* new M.BadStartupMessageError({
+            return yield* new M.BadStartupMessageError({
               error: { _tag: "colorAlreadyTaken", color: message.color },
             });
           }

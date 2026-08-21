@@ -76,18 +76,18 @@ const errors =
 /**
  * repeating an effect
  */
-Effect.repeat(effect, schedule);
+void Effect.repeat(effect, schedule);
 
 /**
  * retrying an effect
  */
-Effect.retry(errors, schedule);
+void Effect.retry(errors, schedule);
 
 /**
  * These both have shorthand methods for basic schedules
  */
-Effect.repeat(effect, { times: 5 });
-Effect.repeat(
+void Effect.repeat(effect, { times: 5 });
+void Effect.repeat(
   Effect.sync(() => Date.now()),
   { while: (n) => n < Date.now() + 1000 }
 );
@@ -95,6 +95,6 @@ Effect.repeat(
 /**
  * specify a fallback if a effect still hasn't succeeded after the schedule is exhausted
  */
-Effect.retryOrElse(Effect.fail(0), Schedule.recurs(5), (error) =>
+void Effect.retryOrElse(Effect.fail(0), Schedule.recurs(5), (error) =>
   Effect.succeed(error)
 );

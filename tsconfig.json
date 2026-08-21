@@ -1,4 +1,5 @@
 {
+  "$schema": "./node_modules/@effect/tsgo/schema.json",
   "compilerOptions": {
     "lib": ["ESNext"],
     "target": "ESNext",
@@ -23,7 +24,19 @@
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
 
-    "plugins": [{ "name": "@effect/language-service" }]
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          "globalErrorInEffectCatch": "suggestion",
+          "globalErrorInEffectFailure": "suggestion",
+          "multipleEffectProvide": "suggestion"
+        },
+        "ignoreEffectSuggestionsInTscExitCode": true,
+        "ignoreEffectWarningsInTscExitCode": true,
+        "ignoreEffectErrorsInTscExitCode": true
+      }
+    ]
   },
   "exclude": ["node_modules", "repos"]
 }

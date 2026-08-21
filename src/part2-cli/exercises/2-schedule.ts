@@ -33,6 +33,6 @@ function cronToSchedule({
 const finalSchedule = Schedule.forever;
 
 const effect = Effect.succeed(1);
-Effect.repeat(effect, finalSchedule);
+void Effect.repeat(effect, finalSchedule);
 
 // Again, not really sure how to write a test for this one, but good luck!

@@ -51,7 +51,7 @@ export const Live: Layer.Layer<never, never, WSSServer | CurrentConnections> =
 
                 console.log(`New connection: ${name}`);
 
-                Ref.update(currentConnections, (connections) =>
+                void Ref.update(currentConnections, (connections) =>
                   HashMap.set(connections, name, {
                     _rawWS: ws,
                     name,
@@ -98,7 +98,7 @@ export const Live: Layer.Layer<never, never, WSSServer | CurrentConnections> =
                 color: conn.value.color,
               });
 
-              Ref.update(currentConnections, (connections) =>
+              void Ref.update(currentConnections, (connections) =>
                 HashMap.remove(connections, connectionName)
               );
 

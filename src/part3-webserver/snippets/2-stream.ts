@@ -28,13 +28,13 @@ import { Console, Effect, Queue, Sink, Stream, pipe } from "effect";
  * Let's take a look at some simple streams...
  */
 
-Stream.empty;
-Stream.succeed(1);
-Stream.make(1, 2, 3);
-Stream.range(1, 10);
-Stream.iterate(1, (n) => n + 1);
-Stream.fromIterable([1, 2, 3]);
-Stream.fromEffect(Effect.sync(() => Date.now()));
+void Stream.empty;
+void Stream.succeed(1);
+void Stream.make(1, 2, 3);
+void Stream.range(1, 10);
+void Stream.iterate(1, (n) => n + 1);
+void Stream.fromIterable([1, 2, 3]);
+void Stream.fromEffect(Effect.sync(() => Date.now()));
 /**
  * many more...
  *

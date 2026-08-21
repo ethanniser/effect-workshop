@@ -20,11 +20,11 @@ const conditions = [true, true, true] as [boolean, boolean, boolean];
 
 const errors = Effect.gen(function* () {
   if (conditions[0]) {
-    yield* Effect.fail(new FooError());
+    return yield* Effect.fail(new FooError());
   } else if (conditions[1]) {
-    yield* Effect.fail(new BarError());
+    return yield* Effect.fail(new BarError());
   } else if (conditions[2]) {
-    yield* Effect.die("Boom");
+    return yield* Effect.die("Boom");
   }
   return "Success";
 });
@@ -47,8 +47,8 @@ const errors = Effect.gen(function* () {
 
 const program = Effect.gen(function* () {
   yield* Console.log("1");
-  yield* Effect.fail(new Error("Boom"));
-  yield* Console.log("2"); // this will not run
+  return yield* Effect.fail(new Error("Boom"));
+  // yield* Console.log("2"); // this will not run
 });
 
 /**
@@ -153,7 +153,7 @@ const handle9 = Effect.firstSuccessOf([
 const handledGen1 = Effect.gen(function* () {
   const r = yield* Effect.sync(() => Math.random());
   if (r > 0.5) {
-    yield* Effect.fail(new Error("fail"));
+    return yield* Effect.fail(new Error("fail"));
   }
   return r * 2;
 }).pipe(Effect.catch((e) => Effect.succeed(-1)));

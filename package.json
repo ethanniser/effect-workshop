@@ -4,7 +4,8 @@
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
-    "typescript": "^5.8.2"
+    "typescript": "7.0.2",
+    "@effect/tsgo": "0.36.5"
   },
   "peerDependencies": {
     "typescript": "^5.8.2"
@@ -69,6 +70,7 @@
     "4-s-3": "bun run src/part4-whatsnext/snippets/3-runtime-and-fiberrefs.ts",
     "4-s-4": "bun run src/part4-whatsnext/snippets/4-telemetry.ts",
     "4-s-5": "bun run src/part4-whatsnext/snippets/5-batching-and-caching.ts",
-    "4-s-6": "bun run src/part4-whatsnext/snippets/6-rpc.ts"
+    "4-s-6": "bun run src/part4-whatsnext/snippets/6-rpc.ts",
+    "prepare": "effect-tsgo patch --typescript --no-oxlint"
   }
 }

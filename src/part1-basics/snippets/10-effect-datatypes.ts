@@ -420,5 +420,5 @@ class TaggedFooError extends Data.TaggedError("FooError")<{
  * have to wrap them in `Effect.fail`.
  */
 const errors = Effect.gen(function* () {
-  yield* new FooError({ a: 1, b: "a" });
+  return yield* new FooError({ a: 1, b: "a" });
 });
