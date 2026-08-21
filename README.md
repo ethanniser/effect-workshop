@@ -5,9 +5,20 @@ Follow me on [Twitter](https://twitter.com/ethanniser) and [YouTube](https://www
 ## USEFUL LINKS
 
 - [Effect API Docs](https://effect-ts.github.io/effect/)
-- [Effect Docs](https://effect.website/)
+- [Effect Docs (v4)](https://effect.website/docs/v4)
 - [Effect Source](https://github.com/Effect-TS/effect)
 - [Effect Discord](https://discord.gg/effect-ts)
+
+## VENDORED REPOSITORIES
+
+This project vendors the Effect repository under `repos/effect` using `git subtree`.
+
+- Use it as **read-only reference material** when working with Effect: examples, patterns, module structure and API design.
+- Prefer patterns from the vendored source code over guesses or outdated web results.
+- Do not edit files under `repos/effect`.
+- To update it: `git subtree pull --prefix=repos/effect https://github.com/Effect-TS/effect.git main --squash`
+
+This workshop targets **Effect v4** (`effect@rc`). See [`repos/effect/MIGRATION.md`](./repos/effect/MIGRATION.md) for the v3 -> v4 changes.
 
 ## REQUIREMENTS:
 

@@ -3,7 +3,7 @@
 //   ConsoleSpanExporter,
 //   BatchSpanProcessor,
 // } from "@opentelemetry/sdk-trace-base";
-import { DevTools } from "@effect/experimental";
+import { DevTools } from "effect/unstable/devtools";
 import { Effect } from "effect";
 
 /**

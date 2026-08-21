@@ -105,10 +105,10 @@ function main(url: string, options?: CLIOptions) {
     buffer.push(text);
 
     const finalString = buffer.join("\n");
-    yield* Effect.matchEffect(Option.fromNullable(options?.output), {
-      onSuccess: (output) =>
+    yield* Option.match(Option.fromNullishOr(options?.output), {
+      onSome: (output) =>
         Effect.tryPromise(() => fs.writeFile(output, finalString)),
-      onFailure: () => Console.log(finalString),
+      onNone: () => Console.log(finalString),
     });
   });
 }

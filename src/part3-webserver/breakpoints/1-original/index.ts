@@ -37,7 +37,7 @@ wss.on("connection", (ws: WebSocket) => {
     try {
       const message = JSON.parse(data.toString());
       const parsedMessage = S.decodeUnknownSync(
-        S.Union(M.ServerIncomingMessage, M.StartupMessage)
+        S.Union([M.ServerIncomingMessage, M.StartupMessage])
       )(message);
 
       switch (parsedMessage._tag) {

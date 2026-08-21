@@ -2,35 +2,40 @@ import { createServer } from "node:http";
 import { BunRuntime } from "@effect/platform-bun";
 import {
   Config,
-  type ConfigError,
   Context,
   Effect,
   Layer,
   Schema,
   pipe,
 } from "effect";
+import type { ConfigError } from "effect/Config";
 import { type WebSocket, WebSocketServer } from "ws";
 
 import * as M from "./model.ts";
 
-class HttpServer extends Context.Tag("HttpServer")<
+class HttpServer extends Context.Service<
   HttpServer,
   ReturnType<typeof createServer>
->() {
+>()("HttpServer") {
   static readonly Live = Layer.sync(HttpServer, createServer);
 }
 
-class WSSServer extends Context.Tag("WSSServer")<WSSServer, WebSocketServer>() {
+class WSSServer extends Context.Service<WSSServer, WebSocketServer>()(
+  "WSSServer"
+) {
   static readonly Live = Layer.effect(
     WSSServer,
-    HttpServer.pipe(Effect.map((server) => new WebSocketServer({ server })))
+    Effect.gen(function* () {
+      const server = yield* HttpServer;
+      return new WebSocketServer({ server });
+    })
   );
 }
 
-const ListenLive: Layer.Layer<never, ConfigError.ConfigError, HttpServer> =
+const ListenLive: Layer.Layer<never, ConfigError, HttpServer> =
   Layer.effectDiscard(
     Effect.gen(function* () {
-      const port = yield* Config.integer("PORT").pipe(Config.withDefault(3000));
+      const port = yield* Config.int("PORT").pipe(Config.withDefault(3000));
 
       const server = yield* HttpServer;
 
@@ -88,7 +93,7 @@ const main: Layer.Layer<never, never, HttpServer | WSSServer> =
             const parsedMessage = pipe(
               message,
               Schema.decodeUnknownSync(
-                Schema.Union(M.ServerIncomingMessage, M.StartupMessage)
+                Schema.Union([M.ServerIncomingMessage, M.StartupMessage])
               )
             );
 

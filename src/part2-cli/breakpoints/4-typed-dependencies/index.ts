@@ -57,7 +57,7 @@ const main = Effect.gen(function* () {
   const headers: [key: string, value: string][] = options?.headers //
     ? yield* Effect.reduce(
         options.headers,
-        new Array<[string, string]>(),
+        () => new Array<[string, string]>(),
         (acc, header) => {
           const [key, value] = header.split(":");
           if (!key || !value) {
@@ -100,10 +100,10 @@ const main = Effect.gen(function* () {
   buffer.push(text);
 
   const finalString = buffer.join("\n");
-  yield* Effect.match(Option.fromNullable(options.output), {
-    onSuccess: (output) =>
+  yield* Option.match(Option.fromNullishOr(options.output), {
+    onSome: (output) =>
       Effect.promise(() => fs.writeFile(output, finalString)),
-    onFailure: () => Console.log(finalString),
+    onNone: () => Console.log(finalString),
   });
 });
 
@@ -115,12 +115,11 @@ const CliOptionsLive = Layer.effect(
       catch: (error) => new M.CliOptionsParseError({ error }),
     });
 
-    const arg = yield* pipe(
-      Option.fromNullable(cli.input[0]),
-      Effect.mapError(
-        () => new M.CliOptionsParseError({ error: "No url provided" })
-      )
-    );
+    const arg = yield* Option.match(Option.fromNullishOr(cli.input[0]), {
+      onSome: (arg) => Effect.succeed(arg),
+      onNone: () =>
+        Effect.fail(new M.CliOptionsParseError({ error: "No url provided" })),
+    });
 
     return {
       url: arg,

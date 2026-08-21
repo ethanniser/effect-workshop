@@ -1,5 +1,4 @@
-import { Effect, type Either, type Option, ParseResult, Schema } from "effect";
-import type { ParseError, ParseIssue } from "effect/ParseResult";
+import { Effect, type Option, type Result, Schema, SchemaGetter, SchemaIssue, SchemaTransformation } from "effect";
 
 /**
  * Ensuring the shape and type of the data we are working with is crucial to writing safe and maintainable code.
@@ -48,37 +47,41 @@ const number = Schema.Number;
 
 /**
  * Now lets build a `Schema<number, string>` that can validate and transform a string to a number.
- * Using `Schema.transform` we first give a schema for the input type, then a schema for the output type,
- * Then functions to encode and decode the data.
+ * In v4 we start from the encoded schema (`Schema.String`) and use `Schema.decodeTo`
+ * with a transformation describing how to decode and encode the data.
  */
 
-const NumberFromString = Schema.transform(Schema.String, Schema.Number, {
-  decode: (string: string): number => Number.parseInt(string),
-  encode: (number: number): string => number.toString(),
-});
+const NumberFromString = Schema.String.pipe(
+  Schema.decodeTo(
+    Schema.Number,
+    SchemaTransformation.transform({
+      decode: (string: string): number => Number.parseInt(string),
+      encode: (number: number): string => number.toString(),
+    })
+  )
+);
 
 /**
- * Or we can use `Schema.transformOrFail` to handle errors in the transformation.
- * Schemas don't have a 'E' type because all errors are encompassed by the `ParseError` type.
+ * Or we can handle errors in the transformation with `SchemaGetter.transformOrFail`.
+ * Schemas don't have a 'E' type because all errors are encompassed by the `SchemaError` type.
  */
-const NumberFromStringSafe = Schema.transformOrFail(
-  Schema.String,
-  Schema.Number,
-  {
-    decode: (string: string, _, ast): Either.Either<number, ParseIssue> =>
-      ParseResult.try({
-        try: () => Number.parseInt(string),
-        catch: (error) => new ParseResult.Type(ast, string),
-      }),
-    encode: (number) => ParseResult.succeed(number.toString()),
-  }
+const NumberFromStringSafe = Schema.String.pipe(
+  Schema.decodeTo(Schema.Number, {
+    decode: SchemaGetter.transformOrFail(
+      (string: string): Effect.Effect<number, SchemaIssue.Issue> =>
+        Number.isNaN(Number.parseInt(string))
+          ? Effect.fail(new SchemaIssue.InvalidValue())
+          : Effect.succeed(Number.parseInt(string))
+    ),
+    encode: SchemaGetter.transform((number: number) => number.toString()),
+  })
 );
 
 /**
  * It's easy to derive types from our schemas
  */
 type Input = Schema.Schema.Type<typeof NumberFromString>;
-type Output = Schema.Schema.Encoded<typeof NumberFromString>;
+type Output = Schema.Codec.Encoded<typeof NumberFromString>;
 
 /**
  * Now lets look at how we can use this schema to validate and transform data.
@@ -87,32 +90,30 @@ const takesNumber = (n: number) => n;
 const takesString = (s: string) => s;
 const str = "123";
 const n = 132;
-declare const unknown: unknown;
+const unknown: unknown = n; // pretend this came from an untrusted source
 
 /**
- * We can verify unknown is `A` (a number) with `validate`, `assert`, or `is`
+ * We can verify unknown is `A` (a number) with `is`
  * `is` returns `self is A` and is useful for type guards
+ * (in v4 `is` checks the decoded type side only, so it accepts numbers)
  */
 if (Schema.is(NumberFromString)(unknown)) {
   takesNumber(unknown);
 }
 /**
- * `assert` throws an error if the data is not of type `A`
+ * `asserts` throws an error if the data is not of type `A`
  */
 {
-  const assertsNumber: Schema.Schema.ToAsserts<typeof NumberFromString> =
-    Schema.asserts(NumberFromString); // required for typescript reasons
-  assertsNumber(unknown);
+  Schema.asserts(NumberFromString, unknown);
   takesNumber(unknown);
 }
 
 /**
- * `validate` returns a `Effect<boolean, ParseError, R>`
+ * decoding returns an `Effect<T, SchemaError, R>`
  */
 const _ = Effect.gen(function* () {
-  if (yield* Schema.validate(NumberFromString)(unknown)) {
-    takesNumber(unknown);
-  }
+  const decoded = yield* Schema.decodeEffect(NumberFromString)(str);
+  takesNumber(decoded);
 });
 
 /**
@@ -122,24 +123,24 @@ const _ = Effect.gen(function* () {
  */
 
 /**
- * for both there are `unknown` versions that take `unknown` (`encodeUnknown*` and `decodeUnknown*`)
+ * for both there are `unknown` versions that take `unknown` (`encodeUnknownSync` etc.)
  * and first validate it matches the first schema before transforming
  */
 
 /**
- * Each of these 4 has 4 variations:
- * no suffix - returns `Effect<T, ParseError, R>`
+ * Each of these has several variations:
+ * no suffix - returns `Effect<T, SchemaError, R>`
  */
-const one: Effect.Effect<string, ParseError, never> =
-  Schema.encode(NumberFromString)(n);
+const one: Effect.Effect<string, Schema.SchemaError, never> =
+  Schema.encodeEffect(NumberFromString)(n);
 
 /**
- * `sync` - returns `T` or throws `ParseError`
+ * `sync` - returns `T` or throws
  */
 const two: string = Schema.encodeSync(NumberFromString)(n);
 
 /**
- * `promise` - returns `Promise<T>` that rejects with `ParseError`
+ * `promise` - returns `Promise<T>` that rejects on failure
  */
 const three: Promise<string> = Schema.encodePromise(NumberFromString)(n);
 
@@ -149,10 +150,10 @@ const three: Promise<string> = Schema.encodePromise(NumberFromString)(n);
 const four: Option.Option<string> = Schema.encodeOption(NumberFromString)(n);
 
 /**
- * `either` - returns `Either<ParseError, T>` that is `Left` if the data is invalid
+ * `result` - returns `Result<ParseError, T>` that is `Failure` if the data is invalid
  */
-const five: Either.Either<string, ParseError> =
-  Schema.encodeEither(NumberFromString)(n);
+const five: Result.Result<string, Schema.SchemaError> =
+  Schema.encodeResult(NumberFromString)(n);
 
 /**
  * Again, remember that transformations can be async or effectful:
@@ -171,7 +172,7 @@ console.log(toString, fromString);
 /**
  * What about one-way transformations?
  * Of course some transformations are lossy, and cannot be reversed.
- * Schemas are `encode` biased (thats why `is`/`assert`/`validate` are all for the `A` type).
+ * Schemas are `encode` biased (thats why `is`/`asserts` are all for the `A` type).
  *
  * If you have a one way transformation, just make decoding always fail.
  *
@@ -179,6 +180,4 @@ console.log(toString, fromString);
  * Schema is a insanely deep and powerful library, and we have only scratched the surface.
  * There are so many features and utilities that we have not even touched on.
  * As well as the tons of built in schemas for common types, patterns, and filters.
- * It has a very long and detailed readme, with lots of examples and explanations.
- * Definitely check it out: https://github.com/Effect-TS/effect/tree/main/packages/schema
  */

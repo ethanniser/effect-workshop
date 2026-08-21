@@ -1,5 +1,6 @@
 import * as fs from "node:fs/promises";
 import { Context, Effect, Layer, pipe } from "effect";
+import type { Success } from "effect/Effect";
 
 /**
  * An Effect's third type parameter represents the 'services' it requires before it can be run
@@ -22,19 +23,19 @@ interface RandomImpl {
 }
 
 /**
- * 2. Creating a Tag for the service:
- * Then we'll create a `Tag` for the service.
+ * 2. Creating a Service class for the service:
+ * Then we'll create a `Context.Service` for the service.
  *
- * A `Tag` is a unique placeholder for a service.
+ * A `Service` is a unique placeholder for a service.
  *
- * We can use the `Tag` as if it were the service itself in our effects
- * and effect will take care of resolving the `Tag` to the actual service at runtime
+ * We can use the `Service` class as if it were the service itself in our effects
+ * and effect will take care of resolving it to the actual service at runtime
  */
 
-class Random extends Context.Tag("Random")<Random, RandomImpl>() {}
+class Random extends Context.Service<Random, RandomImpl>()("Random") {}
 
 /**
- * to use the tag, we work with it as if it was a Effect<RandoImpl>, in this case just 'yielding' it
+ * to use the service, we work with it as if it was a Effect<RandoImpl>, in this case just 'yielding' it
  *
  *  notice how Random now appears in the third type parameter `Effect.Effect<'Low' | 'High', never, Random>`
  */
@@ -79,25 +80,25 @@ console.log(Effect.runSync(runnable));
  * In these cases effect has the `Layer<ROut, E, RIn>` type to help us manage these dependencies
  */
 
-class FeatureFlags extends Context.Tag("FeatureFlag")<
+class FeatureFlags extends Context.Service<
   FeatureFlags,
   {
     readonly isEnabled: (flag: string) => Effect.Effect<boolean>;
   }
->() {}
+>()("FeatureFlags") {}
 
-class ConfigFile extends Context.Tag("ConfigFile")<
+class ConfigFile extends Context.Service<
   ConfigFile,
   {
     readonly contents: Record<string, boolean>;
   }
->() {}
+>()("ConfigFile") {}
 
 /**
  * To create a layer from an effect, we use the `Layer.effect` function
  * think of this like the opposite of `flatMap`.
  * Instead of running after an effect, this effect is run prior to the effect
- * notice how we can use other tags just like normal, but they appear in the RIn type parameter
+ * notice how we can use other services just like normal, but they appear in the RIn type parameter
  */
 
 // FeatureFlagsLive: Layer<FeatureFlags, never, ConfigFile>
@@ -131,7 +132,10 @@ const ConfigFileLive = Layer.effect(
   })
 );
 
-declare const main: Effect.Effect<string, never, FeatureFlags>;
+const main = Effect.gen(function* () {
+  const flags = yield* FeatureFlags;
+  return (yield* flags.isEnabled("feature")) ? "enabled" : "disabled";
+});
 
 /**
  * We can provide layers to an effect using the `Effect.provide` function
@@ -150,7 +154,7 @@ pipe(main, Effect.provide(finalLayer), Effect.runPromise);
 /**
  * Final note:
  */
-class Foo extends Context.Tag("Foo")<Foo, { readonly foo: string }>() {
+class Foo extends Context.Service<Foo, { readonly foo: string }>()("Foo") {
   /**
    * Something convenient you can do with classes is defining a static property with a layer implementation
    */
@@ -175,12 +179,12 @@ class Foo extends Context.Tag("Foo")<Foo, { readonly foo: string }>() {
  * Also another common pattern:
  */
 const makeService = Effect.succeed({ foo: "foo" });
-class Foo2 extends Context.Tag("Foo")<
+class Foo2 extends Context.Service<
   Foo2,
   /**
    * inferring the type of the service from the function that creates it
    */
-  Effect.Effect.Success<typeof makeService>
->() {
+  Success<typeof makeService>
+>()("Foo") {
   static readonly Live = Layer.effect(Foo2, makeService);
 }

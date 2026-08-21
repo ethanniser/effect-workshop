@@ -108,7 +108,7 @@ import { Effect } from "effect";
    * type parameters are unable to be inferred, so you have to specify them 👇
    * @returns Effect<Buffer, NodeJS.ErrnoException>
    */
-  const readFileEffect = Effect.async<Buffer, NodeJS.ErrnoException>(
+  const readFileEffect = Effect.callback<Buffer, NodeJS.ErrnoException>(
     (resume) => {
       readFile("package.json", (err, data) => {
         if (err) {

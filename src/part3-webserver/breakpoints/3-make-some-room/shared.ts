@@ -1,40 +1,43 @@
 import { createServer } from "node:http";
-import { Config, type ConfigError, Context, Effect, Layer } from "effect";
+import { Config, Context, Effect, Layer } from "effect";
+import type { ConfigError } from "effect/Config";
 import { WebSocketServer } from "ws";
 
 import * as M from "./model.ts";
 
-export class HttpServer extends Context.Tag("HttpServer")<
+export class HttpServer extends Context.Service<
   HttpServer,
   ReturnType<typeof createServer>
->() {
+>()("HttpServer") {
   static readonly Live = Layer.sync(HttpServer, createServer);
 }
 
-export class WSSServer extends Context.Tag("WSSServer")<
-  WSSServer,
-  WebSocketServer
->() {
+export class WSSServer extends Context.Service<WSSServer, WebSocketServer>()(
+  "WSSServer"
+) {
   static readonly Live = Layer.effect(
     WSSServer,
-    HttpServer.pipe(Effect.map((server) => new WebSocketServer({ server })))
+    Effect.gen(function* () {
+      const server = yield* HttpServer;
+      return new WebSocketServer({ server });
+    })
   );
 }
 
-export class CurrentConnections extends Context.Tag("CurrentConnections")<
+export class CurrentConnections extends Context.Service<
   CurrentConnections,
   Map<string, M.WebSocketConnection>
->() {
+>()("CurrentConnections") {
   static readonly Live = Layer.sync(CurrentConnections, () => new Map());
 }
 
 export const ListenLive: Layer.Layer<
   never,
-  ConfigError.ConfigError,
+  ConfigError,
   HttpServer | CurrentConnections
 > = Layer.effectDiscard(
   Effect.gen(function* () {
-    const port = yield* Config.integer("PORT").pipe(Config.withDefault(3000));
+    const port = yield* Config.int("PORT").pipe(Config.withDefault(3000));
 
     const server = yield* HttpServer;
 

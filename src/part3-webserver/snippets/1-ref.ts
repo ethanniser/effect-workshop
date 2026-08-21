@@ -26,8 +26,8 @@ const incrementRef = (ref: Ref.Ref<number>): Effect.Effect<void> =>
   Ref.update(ref, (n) => n + 1);
 
 const logRef = (ref: Ref.Ref<number>): Effect.Effect<void> =>
-  ref.pipe(
-    Ref.get,
+  pipe(
+    Ref.get(ref),
     Effect.flatMap((s) => Effect.log(s))
   );
 
@@ -40,7 +40,7 @@ const two: Effect.Effect<void, never, never> = Effect.gen(function* () {
   const logFiber = yield* pipe(
     logRef(ref),
     Effect.repeat(Schedule.spaced("1 seconds")),
-    Effect.fork
+    Effect.forkChild
   );
 
   /**
@@ -49,7 +49,7 @@ const two: Effect.Effect<void, never, never> = Effect.gen(function* () {
   const incFiber = yield* pipe(
     incrementRef(ref),
     Effect.repeat(Schedule.spaced("100 millis")),
-    Effect.fork
+    Effect.forkChild
   );
 
   /**

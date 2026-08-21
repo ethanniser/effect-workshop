@@ -1,5 +1,4 @@
-import { Chunk, Console, Effect, Option, Sink, Stream, pipe } from "effect";
-import type { Emit } from "effect/StreamEmit";
+import { Console, Effect, Queue, Sink, Stream, pipe } from "effect";
 
 /**
  * For a moment consider these two types: `T` and `T[]`
@@ -30,7 +29,6 @@ import type { Emit } from "effect/StreamEmit";
  */
 
 Stream.empty;
-Stream.void;
 Stream.succeed(1);
 Stream.make(1, 2, 3);
 Stream.range(1, 10);
@@ -59,36 +57,34 @@ Stream.fromEffect(Effect.sync(() => Date.now()));
 /**
  * Consider this stream:
  * It emits a number every 250ms until it reaches 5.
+ *
+ * `Stream.callback` hands you a `Queue` to push values into;
+ * offer values to emit them, and end the queue to terminate the stream.
  */
-const spacedInts: Stream.Stream<number, never, never> = Stream.async(
-  (emit: Emit<never, never, number, void>) => {
+const spacedInts: Stream.Stream<number> = Stream.callback<number>(
+  Effect.fn(function* (queue) {
     let number = 0;
 
     const interval = setInterval(() => {
       if (number > 4) {
         clearInterval(interval);
-        emit(Effect.fail(Option.none())); // Terminates the stream
+        Queue.endUnsafe(queue); // Terminates the stream
         return;
       }
       number++;
-      emit(Effect.succeed(Chunk.of(number))); // Add the current iteration to the stream
+      Queue.offerUnsafe(queue, number); // Add the current iteration to the stream
     }, 250);
 
-    return Effect.sync(() => clearInterval(interval)); // Cleanup that will be executed if the fiber executing this Effect is interrupted.
-  }
+    return yield* Effect.sync(() => clearInterval(interval)); // Cleanup that will be executed if the fiber executing this Effect is interrupted.
+  })
 );
 
 /**
- * What is a `Chunk`? A collection of values like an array.
- *
- * This improves the performance of a stream because there is a cost to emitting each value, and it can be common for a stream to emit more than one value at a time.
- * So instead of sending each value individually, we send them in chunks.
- *
- * Why does emitting a failure of `Option.none` stop the stream?
- * There are three options for `Emit`:
- * 1. a success, => We **succeed** by emitting a Chunk<A>.
- * 2. a failure, => We **fail** by emitting a `Option.Some<Error>`.
- * 3. or signaling that the stream is complete. => We **stop** the stream by emitting a `Option.None`.
+ * Why does ending the queue stop the stream?
+ * There are three options for filling a stream's queue:
+ * 1. offering values => We **succeed** by emitting them downstream.
+ * 2. `Queue.fail` => We **fail** the stream with an error.
+ * 3. or `Queue.end` => We signal that the stream is complete.
  *
  * ___
  *
@@ -96,7 +92,7 @@ const spacedInts: Stream.Stream<number, never, never> = Stream.async(
  */
 
 const one = Effect.gen(function* () {
-  const collected: Chunk.Chunk<number> = yield* Stream.runCollect(spacedInts);
+  const collected = yield* Stream.runCollect(spacedInts);
   for (const value of collected) {
     yield* Console.log("`one` emitting:", value);
   }
@@ -143,12 +139,7 @@ const sink2 = pipe(
 // Effect.runPromise(sink2);
 
 /**
- * example of leftovers
+ * example of leftovers:
+ * in v4 sinks report their leftovers as part of their result type,
+ * see `Sink.mapLeftover` / `Sink.ignoreLeftover` for working with them.
  */
-const sink3 = pipe(
-  spacedInts,
-  Stream.run(Sink.head().pipe(Sink.collectLeftover)),
-  Effect.andThen(([head, leftover]) => Console.log(head, leftover))
-);
-
-// Effect.runPromise(sink3);

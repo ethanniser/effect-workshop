@@ -1,13 +1,10 @@
 import {
-  Chunk,
   Console,
   Effect,
   Fiber,
   FiberSet,
   HashMap,
   Layer,
-  Option,
-  type ParseResult,
   PubSub,
   Queue,
   Ref,
@@ -17,44 +14,54 @@ import {
   Stream,
   pipe,
 } from "effect";
+import type { SchemaError } from "effect/Schema";
 import type { WebSocket, WebSocketServer } from "ws";
 
 import * as M from "./model.ts";
 import { CurrentConnections, WSSServer, getAvailableColors } from "./shared.ts";
 
+type WsWebSocket = WebSocket;
+
 const createConnectionsStream = (
   wss: WebSocketServer
-): Stream.Stream<WebSocket, Error, never> =>
-  Stream.async<WebSocket, Error>((emit) => {
-    wss.on("connection", (ws: WebSocket) => emit(Effect.succeed(Chunk.of(ws))));
+): Stream.Stream<WebSocket, Error> =>
+  Stream.callback<WebSocket, Error>(
+    Effect.fn(function* (queue) {
+      yield* Effect.acquireRelease(
+        Effect.sync(() => {
+          wss.on("connection", (ws: WsWebSocket) =>
+            Queue.offerUnsafe(queue, ws)
+          );
+          wss.on("error", (err) => Queue.fail(queue, err));
+          wss.on("close", () => Queue.end(queue));
+        }),
+        () =>
+          Effect.sync(() => {
+            wss.removeAllListeners();
+          })
+      );
+    })
+  ).pipe(Stream.tap(() => Console.log("New connection")));
 
-    wss.on("error", (err) => emit(Effect.fail(Option.some(err))));
-
-    wss.on("close", () => emit(Effect.fail(Option.none())));
-  }).pipe(Stream.tap(() => Console.log("New connection")));
-
-const parseMessage = pipe(
-  Schema.parseJson(M.ServerIncomingMessage),
-  Schema.decode
+const parseMessage = Schema.decodeEffect(
+  Schema.fromJsonString(M.ServerIncomingMessage)
 );
 
-const encodeMessage = pipe(
-  Schema.parseJson(M.ServerOutgoingMessage),
-  Schema.encode
+const encodeMessage = Schema.encodeEffect(
+  Schema.fromJsonString(M.ServerOutgoingMessage)
 );
 
-const parseStartupMessage = pipe(
-  Schema.parseJson(M.StartupMessage),
-  Schema.decode
+const parseStartupMessage = Schema.decodeEffect(
+  Schema.fromJsonString(M.StartupMessage)
 );
 
 const initializeConnection = (
   ws: WebSocket,
-  sendToWsQueue: Queue.Dequeue<M.ServerOutgoingMessage>,
-  broadcastQueue: Queue.Enqueue<M.ServerOutgoingMessage>
+  sendToWsQueue: PubSub.Subscription<M.ServerOutgoingMessage>,
+  broadcastQueue: PubSub.PubSub<M.ServerOutgoingMessage>
 ): Effect.Effect<
   void,
-  | ParseResult.ParseError
+  | SchemaError
   | M.BadStartupMessageError
   | M.UnknownIncomingMessageError,
   CurrentConnections | Scope.Scope
@@ -64,10 +71,10 @@ const initializeConnection = (
     const currentConnectionsRef = yield* CurrentConnections;
 
     const { color, name } = yield* pipe(
-      Effect.async<M.StartupMessage, ParseResult.ParseError>((emit) => {
-        ws.once("message", (data) =>
-          pipe(data.toString(), parseStartupMessage, emit)
-        );
+      Effect.callback<M.StartupMessage, SchemaError>((emit) => {
+        ws.once("message", (data) => {
+          pipe(data.toString(), parseStartupMessage, emit);
+        });
       }),
 
       Effect.mapError(
@@ -97,21 +104,29 @@ const initializeConnection = (
 
     yield* Console.log(`New connection: ${name} (${color})`);
 
-    yield* Queue.offer(broadcastQueue, { _tag: "join", name, color });
+    yield* PubSub.publish(broadcastQueue, { _tag: "join", name, color });
 
-    const rawMessagesStream = Stream.async<string, Error>((emit) => {
-      ws.on("message", (data) =>
-        emit(Effect.succeed(Chunk.of(data.toString())))
-      );
-
-      ws.on("error", (err) => emit(Effect.fail(Option.some(err))));
-
-      ws.on("close", () => emit(Effect.fail(Option.none())));
-    });
+    const rawMessagesStream = Stream.callback<string, Error>(
+      Effect.fn(function* (queue) {
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            ws.on("message", (data) =>
+              Queue.offerUnsafe(queue, data.toString())
+            );
+            ws.on("error", (err) => Queue.fail(queue, err));
+            ws.on("close", () => Queue.end(queue));
+          }),
+          () =>
+            Effect.sync(() => {
+              ws.removeAllListeners();
+            })
+        );
+      })
+    );
 
     const parsedMessagesStream = pipe(
       rawMessagesStream,
-      Stream.mapEffect(parseMessage),
+      Stream.mapEffect((message) => parseMessage(message)),
       Stream.mapError(
         (parseError) => new M.UnknownIncomingMessageError({ parseError })
       )
@@ -132,22 +147,24 @@ const initializeConnection = (
 
     const broadcastFiber = yield* pipe(
       Stream.runForEach(messagesWithInfoStream, (message) =>
-        Queue.offer(broadcastQueue, message)
+        PubSub.publish(broadcastQueue, message)
       ),
-      Effect.fork
+      Effect.forkChild
     );
 
     const manualSendQueue = yield* Queue.unbounded<M.ServerOutgoingMessage>();
 
     const toSendStream = Stream.fromQueue(manualSendQueue).pipe(
-      Stream.merge(Stream.fromQueue(sendToWsQueue))
+      Stream.merge(Stream.fromSubscription(sendToWsQueue))
     );
 
     const sendToWsFiber = yield* pipe(
       Stream.runForEach(toSendStream, (message) =>
-        encodeMessage(message).pipe(Effect.andThen((msg) => ws.send(msg)))
+        encodeMessage(message).pipe(
+          Effect.flatMap((msg) => Effect.sync(() => ws.send(msg)))
+        )
       ),
-      Effect.fork
+      Effect.forkChild
     );
 
     const connection: M.WebSocketConnection = {
@@ -166,7 +183,8 @@ const initializeConnection = (
       HashMap.set(connections, name, connection)
     );
 
-    yield* Fiber.join(Fiber.zip(broadcastFiber, sendToWsFiber));
+    yield* Fiber.join(broadcastFiber);
+    yield* Fiber.join(sendToWsFiber);
   });
 
 export const Live: Layer.Layer<
@@ -183,7 +201,7 @@ export const Live: Layer.Layer<
       void,
       | M.UnknownIncomingMessageError
       | M.BadStartupMessageError
-      | ParseResult.ParseError
+      | SchemaError
     >();
 
     const pubsub = yield* PubSub.unbounded<M.ServerOutgoingMessage>();
@@ -194,17 +212,17 @@ export const Live: Layer.Layer<
       connectionsStream,
       Stream.runForEach((ws) =>
         Effect.gen(function* () {
-          const subscription = yield* pubsub.subscribe;
+          const subscription = yield* PubSub.subscribe(pubsub);
 
           const fiber = yield* pipe(
             initializeConnection(ws, subscription, pubsub),
-            Effect.fork
+            Effect.forkChild
           );
 
           yield* FiberSet.add(fiberSet, fiber);
         })
       ),
-      Effect.fork
+      Effect.forkChild
     );
 
     const connectionLogFiber = yield* pipe(
@@ -232,7 +250,7 @@ export const Live: Layer.Layer<
           timestamp: Date.now(),
         };
 
-        // yield* Queue.offer(pubsub, message);
+        // yield* PubSub.publish(pubsub, message);
 
         /**
          * just to one client
@@ -255,11 +273,10 @@ export const Live: Layer.Layer<
 
       Effect.repeat(Schedule.spaced("1 seconds")),
 
-      Effect.fork
+      Effect.forkChild
     );
 
-    yield* Fiber.join(
-      Fiber.zip(initializeConnectionsFiber, connectionLogFiber)
-    );
+    yield* Fiber.join(initializeConnectionsFiber);
+    yield* Fiber.join(connectionLogFiber);
   })
 );

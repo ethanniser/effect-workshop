@@ -198,7 +198,7 @@ const program3 = () => pipe(getDate(), double, toString, toUpperCase);
   const program3 = pipe(
     Effect.sync(() => Date.now()),
     Effect.map((x) => x * 2),
-    Effect.tap((x) => console.log(x)),
+    Effect.tap((x) => Console.log(x)),
     // even though ^^ returns void, the value is still passed to the next step
     Effect.map((x) => x.toString()),
     Effect.map((x) => x.toUpperCase())
@@ -338,60 +338,48 @@ const after = Effect.succeed(5).pipe(
 );
 
 /**
- * side note on `zipRight` vs `FlatMap`
+ * side note on `Effect.zip` vs `FlatMap`
  *
- * There is also `Effect.zip`, which is basically `Effect.all` but for only two effects
+ * There is `Effect.zip`, which is basically `Effect.all` but for only two effects
  */
 const zipped = Effect.zip(Effect.succeed("hi"), Effect.succeed(10));
 
 /**
- * and `Effect.zipLeft`, which is like `Effect.flatMap` but the result of the second effect is ignored
+ * and `Effect.andThen`, which is like `Effect.flatMap` but the result of the second effect
+ * replaces the result of the first (like the old `zipRight`)
  */
-const zippedLeft = Effect.zipLeft(Effect.succeed("hi"), Effect.succeed(10));
+const zippedRight = Effect.andThen(Effect.succeed("hi"), Effect.succeed(10));
 
 /**
- * and `Effect.zipRight`, which is like `Effect.flatMap` but the result of the first effect is ignored
- */
-const zippedRight = Effect.zipRight(Effect.succeed("hi"), Effect.succeed(10));
-
-/**
- * sometimes it can be confusing when to use `Effect.zipRight` vs `Effect.flatMap`
+ * sometimes it can be confusing when to use `Effect.andThen` vs `Effect.flatMap`
  * but the difference is whether the second effect depends on the result of the first
- * if it does, use `Effect.flatMap`, if it doesn't, use `Effect.zipRight`
+ * if it does, use `Effect.flatMap`, if it doesn't, use `Effect.andThen`
  * you can of course use `Effect.flatMap` with a function that ignores the input
  */
 
 const one = Effect.flatMap(Effect.succeed(5), (x) => Console.log(x));
 const two = Effect.flatMap(Effect.succeed(5), () => Console.log("hi"));
-const three = Effect.zipRight(Effect.succeed(5), Console.log("hi"));
+const three = Effect.andThen(Effect.succeed(5), Console.log("hi"));
 
 /**
- * but its more explicit to use `Effect.zipRight` in that case
+ * but its more explicit to use `Effect.andThen` in that case
  * `flatMap` says, "do this with the result of the first effect"
- * `zipRight` says, "just do this after the first effect"
+ * `andThen` says, "just do this after the first effect"
  */
 
 /**
- * same with `zipLeft` and `tap`
+ * same idea with `tap`: run something after, but keep the original value
  */
 const four = Effect.tap(Effect.succeed(5), (x) => Console.log(x));
 const five = Effect.tap(Effect.succeed(5), () => Console.log("hi"));
-const six = Effect.zipLeft(Effect.succeed(5), Console.log("hi"));
+const six = Effect.as(Effect.tap(Effect.succeed(5), () => Console.log("hi")), 5);
 
 /**
  * Or you could just ignore all of that an use `Effect.andThen`
- * It can take: a value, promise, or effect... or a function that returns any of those
+ * in effect v4 it takes an effect... or a function that returns one
  */
 const foo = Effect.succeed(5);
 
-const seven = Effect.andThen(foo, "hi");
-const eight = Effect.andThen(foo, Promise.resolve("hi"));
 const nine = Effect.andThen(foo, Effect.succeed("hi"));
-const ten = Effect.andThen(foo, (x) => `hi ${x}`);
-const eleven = Effect.andThen(foo, (x) => Promise.resolve(`hi ${x}`));
+const ten = Effect.andThen(foo, (x) => Effect.succeed(`hi ${x}`));
 const twelve = Effect.andThen(foo, (x) => Console.log(`hi ${x}`));
-
-/**
- * curiously, the sync versions are trusted to not throw errors,
- * but the async versions are not- *shrug*
- */

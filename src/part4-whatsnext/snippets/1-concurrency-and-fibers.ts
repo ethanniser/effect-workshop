@@ -30,7 +30,7 @@ const effect = Effect.gen(function* () {
   yield* pipe(
     Effect.suspend(() => Console.log("i", i)),
     Effect.repeat(Schedule.spaced(250)),
-    Effect.fork
+    Effect.forkChild
   );
 
   while (true) {
@@ -135,10 +135,10 @@ const better = Effect.gen(function* () {
  * `Effect.fork` runs the effect in a new fiber, and essentially returns a handle to that fiber.
  */
 const fiber1 = Effect.gen(function* () {
-  const fiber: Fiber.RuntimeFiber<never, never> = yield* Effect.fork(
+  const fiber: Fiber.Fiber<never, never> = yield* Effect.forkChild(
     Effect.never
   );
-  console.log(fiber.id());
+  console.log(fiber.id);
 });
 
 /**
@@ -154,7 +154,7 @@ const fiber1 = Effect.gen(function* () {
  * So if we 'await' a `Fiber<A, E>`, we will get back an `Exit<A, E>` the result of the effect
  */
 const fiber2 = Effect.gen(function* () {
-  const fiber: Fiber.RuntimeFiber<number, never> = yield* Effect.fork(
+  const fiber: Fiber.Fiber<number, never> = yield* Effect.forkChild(
     Effect.succeed(1)
   );
   const result: Exit.Exit<number, never> = yield* Fiber.await(fiber);
@@ -170,7 +170,7 @@ const fiber2 = Effect.gen(function* () {
  * If we don't care about the full exit value, we can use `Fiber.join` to just get the result as an effect
  */
 const fiber3 = Effect.gen(function* () {
-  const fiber: Fiber.RuntimeFiber<number, never> = yield* Effect.fork(
+  const fiber: Fiber.Fiber<number, never> = yield* Effect.forkChild(
     Effect.succeed(1)
   );
   const result: number = yield* Fiber.join(fiber);
@@ -190,7 +190,7 @@ const fiber4 = Effect.gen(function* () {
   yield* pipe(
     Effect.suspend(() => Console.log("i", i)),
     Effect.repeat(Schedule.spaced(250)),
-    Effect.fork
+    Effect.forkChild
   );
 
   while (true) {
@@ -221,7 +221,7 @@ const fiber5 = Effect.gen(function* () {
   yield* pipe(
     Effect.suspend(() => Console.log("i", i)),
     Effect.repeat(Schedule.spaced(250)),
-    Effect.fork
+    Effect.forkChild
   );
 
   i = 100;
@@ -348,8 +348,8 @@ const runExample = () => {
  * Effect gives you a couple escape hatches for this, but they are very low-level and should be used with caution.
  * If you don't have a reason not to use the normal structured concurrency model, you should use it:
  *
- * - `forkScoped` spawns a fiber in the same scope as its parent
- * - `forkDaemon` spawns a fiber in the top level, global scope
+ *  - `forkScoped` spawns a fiber in the same scope as its parent
+ * - `forkDetach` spawns a fiber in the top level, global scope (formerly forkDaemon)
  * - `forkIn` allows you to specify a custom scope to spawn a fiber in with a `Scope`
  *
  *
@@ -365,9 +365,9 @@ const fiber7 = Effect.gen(function* () {
   const deferred: Deferred.Deferred<number, never> =
     yield* Deferred.make<number>();
 
-  const fiber: Fiber.RuntimeFiber<boolean, never> = yield* pipe(
+  const fiber: Fiber.Fiber<boolean, never> = yield* pipe(
     Deferred.succeed(deferred, 42),
-    Effect.fork
+    Effect.forkChild
   );
 
   const result: number = yield* Deferred.await(deferred);
@@ -386,11 +386,11 @@ const fiber7 = Effect.gen(function* () {
 const fiber8 = Effect.gen(function* () {
   const queue: Queue.Queue<number> = yield* Queue.unbounded<number>();
 
-  const fiber: Fiber.RuntimeFiber<void, never> = yield* pipe(
+  const fiber: Fiber.Fiber<void, never> = yield* pipe(
     Queue.take(queue),
     Effect.flatMap((n) => Console.log("recvied", n)),
     Effect.repeat({ times: 2 }),
-    Effect.fork
+    Effect.forkChild
   );
 
   yield* Queue.offer(queue, 42); // Places one value in the queue.
@@ -414,7 +414,7 @@ const fiber8 = Effect.gen(function* () {
  */
 
 const fiber9 = Effect.gen(function* () {
-  yield* pipe(Console.log("fork!"), Effect.fork);
+  yield* pipe(Console.log("fork!"), Effect.forkChild);
   yield* Console.log("main!");
 });
 
@@ -439,8 +439,8 @@ const fiber9 = Effect.gen(function* () {
  */
 
 const fiber10 = Effect.gen(function* () {
-  yield* pipe(Console.log("fork!"), Effect.fork);
-  yield* Effect.yieldNow();
+  yield* pipe(Console.log("fork!"), Effect.forkChild);
+  yield* Effect.yieldNow;
   yield* Console.log("main!");
 });
 
@@ -457,7 +457,7 @@ const fiber10 = Effect.gen(function* () {
  */
 
 const logAfter = (ms: number): Effect.Effect<void, never, never> =>
-  pipe(Effect.sleep(ms), Effect.zipRight(Effect.log(`done-after ${ms}`)));
+  pipe(Effect.sleep(ms), Effect.andThen(Effect.log(`done-after ${ms}`)));
 
 const runsSequentially = Effect.all([
   logAfter(500),
@@ -504,17 +504,9 @@ const boundedConcurrent = Effect.all(
 // Effect.runPromise(boundedConcurrent);
 
 /**
- * And to control this concurrency level externally, you can use { concurrency: 'inherit' } + `withConcurrency`
+ * In effect v3 there was a { concurrency: 'inherit' } option + `withConcurrency`,
+ * in v4 you just pass a number limit directly.
  */
-const externalControl = Effect.all(
-  [logAfter(500), logAfter(1000), logAfter(1500), logAfter(2000)],
-  { concurrency: "inherit" }
-).pipe(Effect.withConcurrency(2)); /** could be done anywhere */
-
-/**
- * Uncomment to run `externalControl`:
- */
-// Effect.runPromise(externalControl);
 
 /**
  * Basically, any API that involves multiple effects, can be run concurrently in this way.

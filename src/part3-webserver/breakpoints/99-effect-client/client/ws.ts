@@ -1,11 +1,9 @@
 import {
-  Chunk,
   Context,
   Effect,
-  Either,
   Layer,
-  Option,
   Queue,
+  Result,
   Schema,
   Stream,
   pipe,
@@ -15,10 +13,10 @@ import WebSocket from "ws";
 import * as C from "../shared/config.ts";
 import * as M from "./model.ts";
 
-export class WebSocketConnection extends Context.Tag("WebSocketConnection")<
+export class WebSocketConnection extends Context.Service<
   WebSocketConnection,
   M.ClientWebSocketConnection
->() {
+>()("WebSocketConnection") {
   public static readonly Live = (name: string, color: M.Color) =>
     Layer.effect(
       WebSocketConnection,
@@ -31,7 +29,7 @@ export class WebSocketConnection extends Context.Tag("WebSocketConnection")<
           () => new WebSocket(`ws://${host}:${port}`)
         );
 
-        yield* Effect.async<void, M.WebSocketError>((emit) => {
+        yield* Effect.callback<void, M.WebSocketError>((emit) => {
           ws.on("open", () => emit(Effect.succeed(undefined)));
 
           ws.on("error", (error) =>
@@ -42,7 +40,7 @@ export class WebSocketConnection extends Context.Tag("WebSocketConnection")<
         yield* pipe(
           M.StartupMessage.make({ _tag: "startup", color, name }),
 
-          Schema.encode(M.StartupMessageFromJSON),
+          Schema.encodeEffect(M.StartupMessageFromJSON),
 
           Effect.flatMap((message) => Effect.sync(() => ws.send(message))),
 
@@ -54,43 +52,42 @@ export class WebSocketConnection extends Context.Tag("WebSocketConnection")<
           )
         );
 
-        const messagesStream = Stream.async<
-          M.ClientIncomingMessage,
-          M.UnknownIncomingMessageError | M.WebSocketError
-        >((emit) => {
-          ws.on("message", (message) => {
-            const messageString = message.toString();
+        const messagesStream = Stream.callback<
+          Result.Result<
+            M.ClientIncomingMessage,
+            M.UnknownIncomingMessageError
+          >,
+          M.WebSocketError
+        >(
+          Effect.fn(function* (queue) {
+            ws.on("message", (message) => {
+              const messageString = message.toString();
 
-            console.log(messageString);
+              console.log(messageString);
 
-            pipe(
-              messageString,
+              const result = pipe(
+                Schema.decodeResult(M.ClientIncomingMessageFromJSON)(
+                  messageString
+                ),
+                Result.mapError(
+                  (parseError) =>
+                    new M.UnknownIncomingMessageError({
+                      parseError,
+                      rawMessage: messageString,
+                    })
+                )
+              );
 
-              Schema.decodeUnknownEither(M.ClientIncomingMessageFromJSON),
+              Queue.offerUnsafe(queue, result);
+            });
 
-              Either.mapLeft(
-                (parseError) =>
-                  new M.UnknownIncomingMessageError({
-                    parseError,
-                    rawMessage: messageString,
-                  })
-              ),
-
-              Either.mapBoth({
-                onRight: (message) => Chunk.make(message),
-                onLeft: (error) => Option.some(error),
-              }),
-
-              emit
+            ws.on("error", (error) =>
+              Queue.fail(queue, new M.WebSocketError({ error }))
             );
-          });
 
-          ws.on("error", (error) =>
-            emit(Effect.fail(Option.some(new M.WebSocketError({ error }))))
-          );
-
-          ws.on("close", () => emit(Effect.fail(Option.none())));
-        }).pipe(
+            ws.on("close", () => Queue.end(queue));
+          })
+        ).pipe(
           Stream.tap((message) =>
             Effect.logDebug(`MESSAGE RECEIVED: ${JSON.stringify(message)}`)
           ),
@@ -99,11 +96,11 @@ export class WebSocketConnection extends Context.Tag("WebSocketConnection")<
             Effect.logError(`ERROR: ${JSON.stringify(error)}`)
           ),
 
-          Stream.either,
+          Stream.catchCause(() => Stream.empty),
 
-          Stream.filter(Either.isRight),
+          Stream.filter(Result.isSuccess),
 
-          Stream.map((either) => either.right)
+          Stream.map((result) => result.success)
         );
 
         const sendQueue = yield* Queue.unbounded<M.ClientOutgoingMessage>();
@@ -112,18 +109,18 @@ export class WebSocketConnection extends Context.Tag("WebSocketConnection")<
           Queue.take(sendQueue),
 
           Effect.flatMap((message) =>
-            pipe(message, Schema.encode(M.ClientOutgoingMessageFromJSON))
+            pipe(message, Schema.encodeEffect(M.ClientOutgoingMessageFromJSON))
           ),
 
           Effect.flatMap((messageString) =>
             Effect.sync(() => ws.send(messageString))
           ),
 
-          Effect.catchAll((error) => Effect.logError(error)),
+          Effect.catch((error) => Effect.logError(error)),
 
           Effect.forever,
 
-          Effect.forkDaemon
+          Effect.forkDetach
         );
 
         const close = Effect.sync(() => ws.close());

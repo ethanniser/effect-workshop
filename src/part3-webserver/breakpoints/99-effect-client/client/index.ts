@@ -1,31 +1,26 @@
-import {
-  type CliApp,
-  Command,
-  Prompt,
-  type ValidationError,
-} from "@effect/cli";
-import {
-  FetchHttpClient,
-  HttpClient,
-  type HttpClientError,
-  HttpClientResponse,
-  type Error as PlatformError,
-  Terminal,
-} from "@effect/platform";
-import { BunContext, BunRuntime } from "@effect/platform-bun";
 import chalk from "chalk";
 import {
-  type ConfigError,
   Console,
   Effect,
   Fiber,
   Match,
-  type ParseResult,
   Queue,
   Ref,
   Stream,
   pipe,
 } from "effect";
+import type { ConfigError } from "effect/Config";
+import { Command, Prompt } from "effect/unstable/cli";
+import {
+  FetchHttpClient,
+  HttpClient,
+  HttpClientResponse,
+  type HttpClientError,
+} from "effect/unstable/http";
+import { BunRuntime, BunServices } from "@effect/platform-bun";
+import { Terminal } from "effect";
+import type { SchemaError } from "effect/Schema";
+import type { PlatformError } from "effect/PlatformError";
 
 import * as C from "../shared/config.ts";
 import * as M from "./model.ts";
@@ -35,7 +30,7 @@ const colorText = (text: string, color: M.Color): string => chalk[color](text);
 
 const write = (
   bufferRef: Ref.Ref<readonly string[]>
-): Effect.Effect<void, PlatformError.PlatformError, Terminal.Terminal> =>
+): Effect.Effect<void, PlatformError, Terminal.Terminal> =>
   Effect.gen(function* () {
     const terminal = yield* Terminal.Terminal;
 
@@ -54,8 +49,8 @@ const write = (
 
 const getAvailableColors: Effect.Effect<
   readonly M.Color[],
-  | ParseResult.ParseError
-  | ConfigError.ConfigError
+  | SchemaError
+  | ConfigError
   | HttpClientError.HttpClientError,
   HttpClient.HttpClient
 > = Effect.gen(function* () {
@@ -77,18 +72,7 @@ const getAvailableColors: Effect.Effect<
   return colors;
 }).pipe(Effect.scoped);
 
-const rootCommand: Command.Command<
-  "root",
-  Terminal.Terminal | HttpClient.HttpClient,
-  | PlatformError.PlatformError
-  | ParseResult.ParseError
-  | ConfigError.ConfigError
-  | HttpClientError.HttpClientError
-  | Terminal.QuitException
-  | M.WebSocketError
-  | M.BadStartupMessageError,
-  {}
-> = Command.make("root", {}, () =>
+const rootCommand = Command.make("root", {}, () =>
   Effect.gen(function* () {
     const name = yield* Prompt.text({ message: "Please enter your name" });
 
@@ -159,11 +143,11 @@ const rootCommand: Command.Command<
           )
         ),
 
-        Stream.catchAll((error) => Effect.logError(error)),
+        Stream.catchCause(() => Stream.empty),
 
         Stream.runDrain,
 
-        Effect.fork
+        Effect.forkChild
       );
 
       const readFiber = yield* pipe(
@@ -175,7 +159,7 @@ const rootCommand: Command.Command<
 
         Effect.forever,
 
-        Effect.fork
+        Effect.forkChild
       );
 
       yield* Fiber.joinAll([recieveFiber, readFiber]);
@@ -183,42 +167,17 @@ const rootCommand: Command.Command<
   })
 );
 
-const run: (
-  args: ReadonlyArray<string>
-) => Effect.Effect<
-  void,
-  | PlatformError.PlatformError
-  | ParseResult.ParseError
-  | ConfigError.ConfigError
-  | HttpClientError.HttpClientError
-  | Terminal.QuitException
-  | M.WebSocketError
-  | M.BadStartupMessageError
-  | ValidationError.ValidationError,
-  HttpClient.HttpClient | CliApp.CliApp.Environment
-> = rootCommand.pipe(
+const run = rootCommand.pipe(
   Command.withDescription("a chat client"),
   Command.run({
-    name: "Chat",
     version: "1.0.0",
   })
 );
 
-const main: Effect.Effect<
-  void,
-  | PlatformError.PlatformError
-  | ParseResult.ParseError
-  | ConfigError.ConfigError
-  | HttpClientError.HttpClientError
-  | Terminal.QuitException
-  | M.WebSocketError
-  | M.BadStartupMessageError
-  | ValidationError.ValidationError,
-  HttpClient.HttpClient | CliApp.CliApp.Environment
-> = Effect.suspend(() => run(globalThis.process.argv));
+const main = Effect.suspend(() => run);
 
 main.pipe(
-  Effect.provide(BunContext.layer),
+  Effect.provide(BunServices.layer),
   Effect.provide(FetchHttpClient.layer),
   BunRuntime.runMain
 );

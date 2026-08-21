@@ -1,0 +1,10 @@
+{
+  "typescript.preferences.autoImportFileExcludePatterns": ["repos/**"],
+  "javascript.preferences.autoImportFileExcludePatterns": ["repos/**"],
+  "search.exclude": {
+    "repos/**": true
+  },
+  "files.watcherExclude": {
+    "repos/**": true
+  }
+}

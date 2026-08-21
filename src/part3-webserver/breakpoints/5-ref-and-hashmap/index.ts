@@ -1,4 +1,4 @@
-import { HttpServer } from "@effect/platform";
+import { HttpServer } from "effect/unstable/http";
 import { BunRuntime } from "@effect/platform-bun";
 import { Console, Effect, Layer, pipe } from "effect";
 
@@ -25,7 +25,9 @@ const StartMessage = Layer.effectDiscard(
     const wssAdress = wssServer.address();
 
     const wssPort =
-      typeof wssAdress === "string" ? wssAdress : wssAdress.port.toString();
+      typeof wssAdress === "string"
+        ? wssAdress
+        : (wssAdress?.port ?? 0).toString();
 
     yield* Console.log(`WebSocket server listening on port ${wssPort}`);
   })

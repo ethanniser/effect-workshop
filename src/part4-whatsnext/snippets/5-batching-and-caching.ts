@@ -1,4 +1,4 @@
-import { Console, Effect, Layer, Request, RequestResolver } from "effect";
+import { Console, Effect, Exit, Request, RequestResolver } from "effect";
 
 /**
  * Very often in apps we have 'requests' that are operations on some external data source
@@ -60,6 +60,7 @@ const simulatedValidation = async <A>(
 
       yield* Console.log(todos);
     });
+  void main;
 }
 
 /**
@@ -73,7 +74,7 @@ const simulatedValidation = async <A>(
  *
  *
  * We start by declaring our Requests.
- * First as an interface: `interface MyRequests extends Request.Requests<ReturnType, ErrorType> { ...inputs... }`
+ * First as an interface: `interface MyRequests extends Request.Request<ReturnType, ErrorType> { ...inputs... }`
  */
 interface GetUserRequest extends Request.Request<User, GetUserError> {
   readonly _tag: "GetUser";
@@ -90,50 +91,70 @@ const GetUserRequest = Request.tagged<GetUserRequest>("GetUser");
 const GetTodoByIdRequest = Request.tagged<GetTodoByIdRequest>("GetTodoById");
 
 /**
- * Next, we declare our `Resolvers` which are the functions that actually perform the requests
+ * Next, we declare our `Resolvers` which are the functions that actually perform the requests.
+ * A resolver receives all pending requests as entries and completes each one
+ * with an `Exit` value using `entry.completeUnsafe`.
  */
-
-const GetUserResolver: RequestResolver.RequestResolver<GetUserRequest, never> =
-  RequestResolver.fromEffect((request: GetUserRequest) =>
+const GetUserResolver: RequestResolver.RequestResolver<GetUserRequest> =
+  RequestResolver.make<GetUserRequest>((entries) =>
+  Effect.forEach(entries, (entry) =>
     Effect.tryPromise({
-      try: () =>
-        simulatedValidation<User>(fetch("https://api.example.demo/user")),
-      catch: () => new GetUserError(),
+      try: async () => {
+        const user = await simulatedValidation<User>(
+          fetch("https://api.example.demo/user")
+        );
+        entry.completeUnsafe(Exit.succeed(user));
+        return user;
+      },
+      catch: (e) => {
+        entry.completeUnsafe(Exit.fail(new GetUserError()));
+        return new GetUserError();
+      },
     })
-  );
+  ).pipe(Effect.asVoid)
+);
 
 /**
  * The key feature here is that resolvers are able to be 'batched'
- * This means that it can take multiple requests and perform them all at once
+ * Requests that arrive within the delay window are all delivered to the
+ * resolver together, so we can perform them all at once
  */
 const GetTodoByIdResolver: RequestResolver.RequestResolver<
-  GetTodoByIdRequest,
-  never
-> = RequestResolver.makeBatched((requests: Array<GetTodoByIdRequest>) =>
+  GetTodoByIdRequest
+> = RequestResolver.make<GetTodoByIdRequest>((entries) =>
   Effect.tryPromise({
     try: () =>
       simulatedValidation<Todo[]>(
         fetch(
-          `https://api.example.demo/getTodoByIdBatched?ids=${requests
-            .map((r) => r.id)
+          `https://api.example.demo/getTodoByIdBatched?ids=${entries
+            .map((entry) => entry.request.id)
             .join(",")}`
         )
       ),
     catch: () => new GetTodoError(),
   }).pipe(
     Effect.flatMap((todos) =>
-      Effect.forEach(requests, (request, index) =>
-        Request.completeEffect(request, Effect.succeed(todos[index]!))
+      Effect.forEach(entries, (entry, index) =>
+        Effect.sync(() => entry.completeUnsafe(Exit.succeed(todos[index]!)))
       )
     ),
-
-    Effect.catchAll((error) =>
-      Effect.forEach(requests, (request) =>
-        Request.completeEffect(request, Effect.fail(error))
+    Effect.catch((error) =>
+      Effect.forEach(entries, (entry) =>
+        Effect.sync(() => entry.completeUnsafe(Exit.fail(error)))
       )
     )
-  )
+  ));
+
+// Control the delay before the resolver is executed. This allows more
+// requests to be batched together...
+const GetTodoByIdResolverDelayed = RequestResolver.setDelay(
+  GetTodoByIdResolver,
+  "10 millis"
 );
+// ...and add a simple cache so repeated requests don't hit the network at all
+void RequestResolver.withCache(GetTodoByIdResolverDelayed, {
+  capacity: 1024,
+});
 
 /**
  * Now we can use these in combinate with `Effect.request` to perform the requests
@@ -141,7 +162,7 @@ const GetTodoByIdResolver: RequestResolver.RequestResolver<
  */
 
 const getUser: Effect.Effect<User, GetUserError, never> = Effect.request(
-  GetUserRequest({}),
+  GetUserRequest(undefined),
   GetUserResolver
 );
 
@@ -151,39 +172,25 @@ const getTodoById = (id: number): Effect.Effect<Todo, GetTodoError, never> =>
 /**
  * Q: Well, we've done all this work, what do we get?
  *
- * If we enable batching (just like how we set concurrency in `Effect.all`)
- * you can also use `Effect.withRequestBatching` to enable batching for all requests in a scope
- * now, any requests made within the 'effect.all' will be batched together when possible.
+ * Requests made concurrently while the resolver's delay window is open
+ * will be batched together into a single call.
  */
 
 const main: Effect.Effect<void, GetTodoError | GetUserError, never> =
   Effect.gen(function* () {
     const users = yield* getUser;
     const todos = yield* Effect.all(users.todoIds.map(getTodoById), {
-      batching: true,
+      concurrency: "unbounded",
     });
     yield* Console.log(todos);
   });
 
 /**
- * This has reduced our N+1 requests to just 2 requests
- *
- * We also get caching for free with just a single function
+ * This has reduced our N+1 requests to just 2 requests,
+ * and thanks to `RequestResolver.withCache`, repeating them is free.
  */
 
-main.pipe(Effect.repeat({ times: 10 }), Effect.withRequestCaching(true));
-// or with a custom cache
-main.pipe(
-  Effect.repeat({ times: 10 }),
-  Effect.provide(
-    Layer.setRequestCache(
-      Request.makeCache({
-        capacity: 100,
-        timeToLive: "12 seconds",
-      })
-    )
-  )
-);
+void main.pipe(Effect.repeat({ times: 10 }));
 
 /**
  * the default cache has a capacity of 65000, and a time to live of 60 seconds
@@ -194,43 +201,40 @@ main.pipe(
     readonly _tag: "TestReq";
   }
   const TestReq = Request.tagged<TestReq>("TestReq");
-  const TestReqResolver = RequestResolver.makeBatched(
-    (requests: Array<TestReq>) =>
-      Effect.gen(function* () {
-        yield* Console.log(
-          "received request",
-          requests.map((r) => r.id)
-        );
-      }).pipe(
-        Effect.zipRight(
-          Effect.forEach(requests, (request) =>
-            Request.completeEffect(request, Effect.void)
-          )
-        )
-      )
-  );
+  const TestReqResolver = RequestResolver.make<TestReq>(
+    Effect.fn(function* (entries) {
+      yield* Console.log(
+        "received request",
+        entries.map((entry) => entry.request.id)
+      );
+
+      yield* Effect.forEach(entries, (entry) =>
+        Effect.sync(() => entry.completeUnsafe(Exit.succeed(void 0)))
+      );
+    })
+  ).pipe(RequestResolver.setDelay("10 millis"));
 
   const makeRequest = (id: number): Effect.Effect<void, never, never> =>
     Effect.request(TestReq({ id }), TestReqResolver);
 
-  const main: Effect.Effect<void, never, never> = Effect.gen(function* () {
+  const main2: Effect.Effect<void, never, never> = Effect.gen(function* () {
     const requests = [
       Effect.sleep("1 seconds").pipe(
-        Effect.zipRight(Console.log("slept for 1 second"))
+        Effect.andThen(Console.log("slept for 1 second"))
       ),
       makeRequest(2),
       makeRequest(3),
     ];
-    yield* Effect.all(requests, { batching: true, concurrency: "unbounded" });
+    yield* Effect.all(requests, { concurrency: "unbounded" });
   });
 
-  Effect.runPromise(main); // requests don't even begin until the sleep is done
+  void Effect.runPromise(main2); // both requests arrive in one batch
 }
 /**
  * Consider this example...
  *
  * Be mindful when you use batching.
- * When you enable it, it basically tells the runtime to pause all effects waiting for a batched request resolver;
- * to wait until every other running request has either finished, errored,
+ * The delay window tells the runtime to pause effects waiting for a batched request resolver;
+ * they wait until every other running request has either finished, errored,
  * or is also waiting for the same batched request resolver.
  */

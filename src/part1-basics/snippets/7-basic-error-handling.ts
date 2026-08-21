@@ -1,4 +1,4 @@
-import { Console, Effect, Either, pipe } from "effect";
+import { Console, Effect, Result, pipe } from "effect";
 
 /**
  * Errors are inevitable in any program, and we need to be able to handle them.
@@ -54,15 +54,15 @@ const program = Effect.gen(function* () {
 /**
  * with that established, lets look at how we can handle errors
  *
- * first `catchAll`
+ * first `catch` (formerly known as `catchAll`)
  */
 
 const handled1 = errors.pipe(
-  Effect.catchAll((e) => Effect.succeed(`Handled ${e._tag}`))
+  Effect.catch((e) => Effect.succeed(`Handled ${e._tag}`))
 );
 
 /**
- * `catchAll` takes a function that takes the error (whose type is whatever the effect can fail with)
+ * `catch` takes a function that takes the error (whose type is whatever the effect can fail with)
  * and returns a new effect, either succeeding with a value or failing with a new error.
  *
  * However, most of the time, we want to handle errors of a specific type
@@ -75,7 +75,7 @@ const handled2: Effect.Effect<string, BarError, never> = errors.pipe(
   Effect.catchTag("FooError", (e) => Effect.succeed("Handled Foo"))
 );
 
-/** to handle multiple tagged errors at the same time we can use `catchTag` */
+/** to handle multiple tagged errors at the same time we can use `catchTags` */
 const handled3: Effect.Effect<string, never, never> = errors.pipe(
   Effect.catchTags({
     FooError: (e) => Effect.succeed("Handled Foo"),
@@ -88,14 +88,15 @@ const handled3: Effect.Effect<string, never, never> = errors.pipe(
  */
 
 /**
- * `orElse` is similar to `catchAll`, but is already specified prior to the error
+ * `Effect.catch` ignores nothing, it always hands you the error,
+ * but you can simply ignore it in the handler
  */
-const handled4 = errors.pipe(Effect.orElse(() => Effect.succeed("Handled")));
+const handled4 = errors.pipe(Effect.catch(() => Effect.succeed("Handled")));
 
 /**
- * `orElseFail` maps any error to a new already specified error
+ * `mapError` maps any error to a new already specified error
  */
-const handle5 = errors.pipe(Effect.orElseFail(() => new Error("fail")));
+const handle5 = errors.pipe(Effect.mapError(() => new Error("fail")));
 
 /**
  * `mapError` maps an error to a new error
@@ -155,7 +156,7 @@ const handledGen1 = Effect.gen(function* () {
     yield* Effect.fail(new Error("fail"));
   }
   return r * 2;
-}).pipe(Effect.catchAll((e) => Effect.succeed(-1)));
+}).pipe(Effect.catch((e) => Effect.succeed(-1)));
 
 /**
  * another option is doing error handling in the adapter pipe
@@ -169,28 +170,28 @@ const mightFail = Effect.sync(() => Math.random()).pipe(
 const handledGen2 = Effect.gen(function* () {
   const r = yield* pipe(
     mightFail,
-    Effect.catchAll(() => Effect.succeed(-1))
+    Effect.catch(() => Effect.succeed(-1))
   );
   return r * 2;
 });
 
 /**
  * But if you want to get back your error as a value to work with in your generator, just like you would with a success value
- * you can use `Effect.either`.
- * `Either` is a simple disjointed union type, that can represent either
- * - a `left` or
- * - a `right` value
+ * you can use `Effect.result`.
+ * `Result` is a simple disjointed union type, that can represent either
+ * - a `failure` or
+ * - a `success` value
  *
- * `Effect.either` will return a `Left` if the effect succeeded, and a `Right` if the effect failed:
+ * `Effect.result` will return a `Failure` if the effect failed, and a `Success` if the effect succeeded:
  * you can then pattern match on the result, and handle the error
  */
 
 const handledGen3 = Effect.gen(function* () {
-  const either = yield* Effect.either(mightFail);
-  if (Either.isRight(either)) {
-    return either.right * 2;
+  const result = yield* Effect.result(mightFail);
+  if (Result.isSuccess(result)) {
+    return result.success * 2;
   } else {
-    console.error(either.left.message);
+    console.error(result.failure.message);
     return -1;
   }
 });

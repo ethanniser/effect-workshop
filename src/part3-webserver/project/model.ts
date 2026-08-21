@@ -1,4 +1,5 @@
-import { Data, type ParseResult, Schema } from "effect";
+import { Data, Schema } from "effect";
+import type { SchemaError } from "effect/Schema";
 
 export const colors = [
   "red",
@@ -10,7 +11,7 @@ export const colors = [
   "white",
 ] as const;
 export type Color = (typeof colors)[number];
-export const Color = Schema.Literal(...colors);
+export const Color = Schema.Literals([...colors]);
 
 export const StartupMessage = Schema.Struct({
   _tag: Schema.Literal("startup"),
@@ -26,14 +27,14 @@ export class BadStartupMessageError extends Data.TaggedError(
   readonly error:
     | {
         readonly _tag: "parseError";
-        readonly parseError: ParseResult.ParseError;
+        readonly parseError: SchemaError;
       }
     | { readonly _tag: "colorAlreadyTaken"; readonly color: Color };
 }> {}
 
-export const ServerIncomingMessage = Schema.Union(
+export const ServerIncomingMessage = Schema.Union([
   Schema.Struct({ _tag: Schema.Literal("message"), message: Schema.String })
-);
+]);
 
 export type ServerIncomingMessage = Schema.Schema.Type<
   typeof ServerIncomingMessage
@@ -43,10 +44,10 @@ export class UnknownIncomingMessageError extends Data.TaggedError(
   "UnknownIncomingMessage"
 )<{
   readonly rawMessage: string;
-  readonly parseError: ParseResult.ParseError;
+  readonly parseError: SchemaError;
 }> {}
 
-export const ServerOutgoingMessage = Schema.Union(
+export const ServerOutgoingMessage = Schema.Union([
   Schema.Struct({
     _tag: Schema.Literal("message"),
     name: Schema.String,
@@ -64,13 +65,15 @@ export const ServerOutgoingMessage = Schema.Union(
     name: Schema.String,
     color: Color,
   })
-);
+]);
 export type ServerOutgoingMessage = Schema.Schema.Type<
   typeof ServerOutgoingMessage
 >;
 
+type WsWebSocket = import("ws").WebSocket;
+
 export interface WebSocketConnection {
-  readonly _rawWS: WebSocket;
+  readonly _rawWS: WsWebSocket;
   readonly name: string;
   readonly color: Color;
   readonly timeConnected: number;

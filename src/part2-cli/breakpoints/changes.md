@@ -36,9 +36,9 @@
 - use `match` to create request
 - replace self built process.exit with runMain
 
-## 6 -> 7 - Utilizing @effect/cli
+## 6 -> 7 - Utilizing effect/unstable/cli
 
-- use @effect/cli for args processing
+- use `effect/unstable/cli` (Command/Flag/Argument) for args processing
 - refactor req builder now that have proper schema for method type
 - show help and wizard
 

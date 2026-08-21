@@ -7,7 +7,7 @@ _Having trouble or want to share your solution? @ me in the Effect discord!_
 1. Implement the Client yourself
 
 - What can you reuse from the server code? What will you have to modify?
-- What will the ui be? A cli (use `@effect/platform` for terminal interface or `@effect/cli`)? Or maybe a web app?
+- What will the ui be? A cli (use `effect/Terminal` or `effect/unstable/cli`)? Or maybe a web app?
 
 2. Add Authentication
 

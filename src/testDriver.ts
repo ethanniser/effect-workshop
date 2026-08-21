@@ -1,23 +1,23 @@
 import assert from "node:assert";
 import { Array, Console, Context, Effect, Layer, Ref, pipe } from "effect";
 
-class TestLogs extends Context.Tag("TestLogs")<
+class TestLogs extends Context.Service<
   TestLogs,
   Ref.Ref<ReadonlyArray<unknown>>
->() {
+>()("TestLogs") {
   static readonly Live = Layer.effect(
     TestLogs,
     Ref.make<ReadonlyArray<unknown>>([])
   );
 }
 
-export class Test extends Context.Tag("Test")<
+export class Test extends Context.Service<
   Test,
   {
     logTest: (message: unknown) => Effect.Effect<void>;
     assertLogs: (expected: Array<unknown>) => Effect.Effect<void, Error>;
   }
->() {
+>()("Test") {
   static readonly Live = Layer.effect(
     Test,
     Effect.gen(function* () {
@@ -34,7 +34,7 @@ export class Test extends Context.Tag("Test")<
 
       return {
         logTest: (message: unknown) =>
-          Effect.zipRight(
+          Effect.andThen(
             Console.log("Test logging: ", message),
             addLog(message)
           ),
@@ -44,7 +44,10 @@ export class Test extends Context.Tag("Test")<
   );
 }
 
-const { logTest, assertLogs } = Effect.serviceFunctions(Test);
+const logTest = (message: unknown) => Test.use((t) => t.logTest(message));
+const assertLogs = (expected: Array<unknown>) =>
+  Test.use((t) => t.assertLogs(expected));
+
 const testLive = Layer.provide(Test.Live, TestLogs.Live);
 
 const testRunAssert = (
@@ -60,32 +63,32 @@ const testRunAssert = (
 ) =>
   pipe(
     Console.log(`\n--- Test ${number} Start ---`),
-    Effect.zipRight(effect),
-    Effect.zipLeft(assertLogs(expected.logs ?? [])),
-    Effect.tapBoth({
-      onSuccess: (value) =>
-        Effect.sync(() => {
-          if (expected.successIs) {
-            assert(expected.successIs(value));
-          } else {
-            expected.success && assert.deepStrictEqual(value, expected.success);
-          }
-          expected.failure && assert.fail("Expected failure but got success");
-        }),
-      onFailure: (error) =>
-        Effect.sync(() => {
-          if (expected.failureIs) {
-            assert(expected.failureIs(error));
-          } else {
-            expected.failure && assert.deepStrictEqual(error, expected.failure);
-          }
-          expected.success && assert.fail("Expected success but got failure");
-        }),
-    }), // again defect on purpose
-    Effect.catchAll((error) => Effect.succeed(error)),
-    Effect.andThen((value) => Console.log(`--- Test ${number} Passed ---\n`)),
+    Effect.andThen(effect),
+    Effect.tap(() => assertLogs(expected.logs ?? [])),
+    Effect.tap((value) =>
+      Effect.sync(() => {
+        if (expected.successIs) {
+          assert(expected.successIs(value));
+        } else {
+          expected.success && assert.deepStrictEqual(value, expected.success);
+        }
+        expected.failure && assert.fail("Expected failure but got success");
+      })
+    ),
+    Effect.tapError((error) =>
+      Effect.sync(() => {
+        if (expected.failureIs) {
+          assert(expected.failureIs(error));
+        } else {
+          expected.failure && assert.deepStrictEqual(error, expected.failure);
+        }
+        expected.success && assert.fail("Expected success but got failure");
+      })
+    ), // again defect on purpose
+    Effect.catch((error) => Effect.succeed(error)),
+    Effect.andThen(() => Console.log(`--- Test ${number} Passed ---\n`)),
     Effect.provide(testLive),
-    Effect.catchAllCause((cause) => Console.error(cause.toString())),
+    Effect.catchCause((cause) => Console.error(cause.toString())),
     Effect.runPromise
   );
 

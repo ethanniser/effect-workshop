@@ -19,7 +19,7 @@ type Input =
   | { readonly _tag: "B"; readonly b: boolean }
   | { readonly _tag: "C"; readonly c: number | string };
 
-declare const input: Input;
+const input: Input = { _tag: "C", c: "hi" };
 
 const match = Match.type<Input>().pipe(
   Match.when({ _tag: "A" }, (a) => `A: ${a.a}`),
@@ -90,7 +90,7 @@ const result = match6(input);
  * - `Match.orElse`
  * - `Match.orElseAbsurd`
  * - `Match.option`
- * - `Match.either`
+ * - `Match.result`
  */
 
 /**
@@ -121,12 +121,12 @@ const match8 = Match.type<Input>().pipe(
 const result3 = match8(input);
 
 /**
- * Finally `Match.either` is similar to option but provides the leftover value instead of None
+ * Finally `Match.result` is similar to option but provides the leftover value as a Failure
  */
 const match9 = Match.type<Input>().pipe(
   Match.tag("A", (a) => `A: ${a.a}`),
   Match.tag("B", (b) => `B: ${b.b}`),
-  Match.either
+  Match.result
 );
 
 const result4 = match9(input);

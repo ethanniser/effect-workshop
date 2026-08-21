@@ -24,5 +24,6 @@
     "noUncheckedIndexedAccess": true,
 
     "plugins": [{ "name": "@effect/language-service" }]
-  }
+  },
+  "exclude": ["node_modules", "repos"]
 }

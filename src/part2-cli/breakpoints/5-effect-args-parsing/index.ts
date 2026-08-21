@@ -1,15 +1,35 @@
 import * as fs from "node:fs/promises";
-import { Console, Effect, Layer, Option, Schema, pipe } from "effect";
+import {
+  Console,
+  Effect,
+  Layer,
+  Option,
+  Schema,
+  SchemaTransformation,
+  pipe,
+} from "effect";
 
 import * as M from "./model.ts";
 
 const StringPairsFromStrings = Schema.Array(Schema.String).pipe(
-  Schema.filter((arr) => arr.every((s) => s.split(": ").length === 2)),
-  Schema.transform(Schema.Array(Schema.Tuple(Schema.String, Schema.String)), {
-    decode: (arr) =>
-      arr.map((s) => s.split(": ") as unknown as readonly [string, string]),
-    encode: (arr) => arr.map((s) => s.join(": ")),
-  })
+  Schema.check(
+    Schema.makeFilter(
+      (arr: ReadonlyArray<string>) =>
+        arr.every((s) => s.split(": ").length === 2),
+      { message: "expected \"key: value\" pairs" }
+    )
+  ),
+  Schema.decodeTo(
+    Schema.Array(Schema.Tuple([Schema.String, Schema.String])),
+    SchemaTransformation.transform<
+      ReadonlyArray<readonly [string, string]>,
+      ReadonlyArray<string>
+    >({
+      decode: (arr) =>
+        arr.map((s) => s.split(": ") as unknown as readonly [string, string]),
+      encode: (arr) => arr.map((s) => s.join(": ")),
+    })
+  )
 );
 
 const main = Effect.gen(function* () {
@@ -49,10 +69,10 @@ const main = Effect.gen(function* () {
   buffer.push(text);
 
   const finalString = buffer.join("\n");
-  yield* Effect.match(options.output, {
-    onSuccess: (output) =>
+  yield* Option.match(options.output, {
+    onSome: (output) =>
       Effect.promise(() => fs.writeFile(output, finalString)),
-    onFailure: () => Console.log(finalString),
+    onNone: () => Console.log(finalString),
   });
 });
 
@@ -71,7 +91,7 @@ function getCliOption(
       (_) => (_ === -1 ? Option.none() : Option.some(_))
     );
     const nextIndex = index + 1;
-    const value = yield* Option.fromNullable(cliArgs[nextIndex]);
+    const value = yield* Option.fromNullishOr(cliArgs[nextIndex]);
     return value;
   });
 }
@@ -115,7 +135,7 @@ const CliOptionsLive = Layer.effect(
         name: "headers",
         alias: "H",
       }),
-      Schema.decode(StringPairsFromStrings),
+      Schema.decodeEffect(StringPairsFromStrings),
       Effect.mapError(() => new M.HeaderParseError())
     );
 
@@ -133,12 +153,11 @@ const CliOptionsLive = Layer.effect(
       Option.map((_) => _ === "true")
     );
 
-    const url = yield* pipe(
-      Option.fromNullable("http://www.example.com"),
-      Effect.mapError(
-        () => new M.CliOptionsParseError({ error: "No url provided" })
-      )
-    );
+    const url = yield* Option.match(Option.some("http://www.example.com"), {
+      onSome: (url) => Effect.succeed(url),
+      onNone: () =>
+        Effect.fail(new M.CliOptionsParseError({ error: "No url provided" })),
+    });
 
     return {
       url,

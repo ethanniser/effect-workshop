@@ -1,46 +1,56 @@
 import {
-  Chunk,
   Console,
   Effect,
   HashMap,
   Layer,
-  Option,
+  Queue,
   Ref,
   Schedule,
   Schema,
   Stream,
   pipe,
 } from "effect";
-import type { ParseError } from "effect/ParseResult";
-import type { WebSocket, WebSocketServer } from "ws";
+import type { SchemaError } from "effect/Schema";
+import { type WebSocket, type WebSocketServer } from "ws";
 
 import * as M from "./model.ts";
 import { CurrentConnections, WSSServer, getAvailableColors } from "./shared.ts";
 
+type WsWebSocket = WebSocket;
+
 const createConnectionsStream = (
   wss: WebSocketServer
-): Stream.Stream<WebSocket, Error, never> =>
-  Stream.async<WebSocket, Error>((emit) => {
-    wss.on("connection", (ws: WebSocket) => emit(Effect.succeed(Chunk.of(ws))));
+): Stream.Stream<WebSocket, Error> =>
+  Stream.callback<WebSocket, Error>(
+    Effect.fn(function* (queue) {
+      yield* Effect.acquireRelease(
+        Effect.sync(() => {
+          wss.on("connection", (ws: WsWebSocket) =>
+            Queue.offerUnsafe(queue, ws)
+          );
+          wss.on("error", (err) => Queue.fail(queue, err));
+          wss.on("close", () => Queue.end(queue));
+        }),
+        () =>
+          Effect.sync(() => {
+            wss.removeAllListeners("connection");
+            wss.removeAllListeners("error");
+            wss.removeAllListeners("close");
+          })
+      );
+    })
+  ).pipe(Stream.tap(() => Console.log("New connection")));
 
-    wss.on("error", (err) => emit(Effect.fail(Option.some(err))));
-
-    wss.on("close", () => emit(Effect.fail(Option.none())));
-  }).pipe(Stream.tap(() => Console.log("New connection")));
-
-const parseMessage = pipe(
-  Schema.parseJson(M.ServerIncomingMessage),
-  Schema.decode
+const parseMessage = Schema.decodeEffect(
+  Schema.fromJsonString(M.ServerIncomingMessage)
 );
 
-const encodeMessage = pipe(
-  Schema.parseJson(M.ServerOutgoingMessage),
-  Schema.encode
+const encodeMessage = Schema.encodeEffect(
+  Schema.fromJsonString(M.ServerOutgoingMessage)
 );
 
-const parseStartupMessage = pipe(
-  Schema.parseJson(M.StartupMessage),
-  Schema.decode
+const parseStartupMessage = Schema.decodeEffect(
+  Schema.fromJsonString(M.StartupMessage)
 );
 
 const initializeConnection = (
@@ -56,7 +66,7 @@ const initializeConnection = (
     const connectionsRef = yield* CurrentConnections;
 
     const { color, name } = yield* pipe(
-      Effect.async<M.StartupMessage, ParseError>((emit) => {
+      Effect.callback<M.StartupMessage, SchemaError>((emit) => {
         ws.once("message", (data) =>
           pipe(data.toString(), parseStartupMessage, emit)
         );
@@ -106,20 +116,28 @@ const initializeConnection = (
       HashMap.set(connections, name, connection)
     );
 
-    const rawMessagesStream = Stream.async<string, Error>((emit) => {
-      ws.on("message", (data) =>
-        emit(Effect.succeed(Chunk.of(data.toString())))
-      );
-
-      ws.on("error", (err) => emit(Effect.fail(Option.some(err))));
-
-      ws.on("close", () => emit(Effect.fail(Option.none())));
-    });
+    const rawMessagesStream = Stream.callback<string, Error>(
+      Effect.fn(function* (queue) {
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            ws.on("message", (data) =>
+              Queue.offerUnsafe(queue, data.toString())
+            );
+            ws.on("error", (err) => Queue.fail(queue, err));
+            ws.on("close", () => Queue.end(queue));
+          }),
+          () =>
+            Effect.sync(() => {
+              ws.removeAllListeners();
+            })
+        );
+      })
+    );
 
     const parsedMessagesStream = pipe(
       rawMessagesStream,
 
-      Stream.mapEffect(parseMessage),
+      Stream.mapEffect((message) => parseMessage(message)),
 
       Stream.mapError(
         (parseError) => new M.UnknownIncomingMessageError({ parseError })
@@ -160,7 +178,7 @@ export const Live: Layer.Layer<
           conn.send(message)
         );
       }).pipe(
-        Effect.catchAll((err) => Console.error(err)),
+        Effect.catch((err) => Console.error(err)),
         Effect.asVoid
       );
 

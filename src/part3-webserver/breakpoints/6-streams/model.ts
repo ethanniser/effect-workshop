@@ -1,5 +1,5 @@
 import { Data, type Effect, Schema } from "effect";
-import type { ParseError } from "effect/ParseResult";
+import type { SchemaError } from "effect/Schema";
 
 export const colors = [
   "red",
@@ -11,7 +11,7 @@ export const colors = [
   "white",
 ] as const;
 export type Color = (typeof colors)[number];
-export const Color = Schema.Literal(...colors);
+export const Color = Schema.Literals([...colors]);
 
 export const StartupMessage = Schema.Struct({
   _tag: Schema.Literal("startup"),
@@ -25,16 +25,16 @@ export class BadStartupMessageError extends Data.TaggedError(
   "BadStartupMessage"
 )<{
   readonly error:
-    | { readonly _tag: "parseError"; readonly parseError: ParseError }
+    | { readonly _tag: "parseError"; readonly parseError: SchemaError }
     | { readonly _tag: "colorAlreadyTaken"; readonly color: Color };
 }> {}
 
-export const ServerIncomingMessage = Schema.Union(
+export const ServerIncomingMessage = Schema.Union([
   Schema.Struct({
     _tag: Schema.Literal("message"),
     message: Schema.String,
   })
-);
+]);
 
 export type ServerIncomingMessage = Schema.Schema.Type<
   typeof ServerIncomingMessage
@@ -42,13 +42,13 @@ export type ServerIncomingMessage = Schema.Schema.Type<
 
 export class UnknownIncomingMessageError extends Data.TaggedError(
   "UnknownIncomingMessage"
-)<{ readonly parseError: ParseError | Error }> {}
+)<{ readonly parseError: SchemaError | Error }> {}
 
 export class WebSocketError extends Data.TaggedError("WebSocketError")<{
   readonly error: Error;
 }> {}
 
-export const ServerOutgoingMessage = Schema.Union(
+export const ServerOutgoingMessage = Schema.Union([
   Schema.Struct({
     _tag: Schema.Literal("message"),
     name: Schema.String,
@@ -66,20 +66,22 @@ export const ServerOutgoingMessage = Schema.Union(
     name: Schema.String,
     color: Color,
   })
-);
+]);
 
 export type ServerOutgoingMessage = Schema.Schema.Type<
   typeof ServerOutgoingMessage
 >;
 
+type WsWebSocket = import("ws").WebSocket;
+
 export interface WebSocketConnection {
-  readonly _rawWS: WebSocket;
+  readonly _rawWS: WsWebSocket;
   readonly name: string;
   readonly color: Color;
   readonly timeConnected: number;
   readonly send: (
     message: ServerOutgoingMessage
-  ) => Effect.Effect<void, ParseError>;
+  ) => Effect.Effect<void, SchemaError>;
   readonly close: Effect.Effect<void>;
 }
 

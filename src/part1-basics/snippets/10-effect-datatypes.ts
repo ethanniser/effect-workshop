@@ -4,15 +4,14 @@ import {
   Data,
   Duration,
   Effect,
-  Either,
   Equal,
   Exit,
   Hash,
   HashSet,
   Option,
+  Result,
   pipe,
 } from "effect";
-import type { FiberId } from "effect/FiberId";
 
 /**
  * Effect has a number of useful datatypes that are commonly used
@@ -35,12 +34,12 @@ import type { FiberId } from "effect/FiberId";
  */
 const none = Option.none();
 const some = Option.some(1);
-Option.fromNullable(null);
+Option.fromNullOr(null);
 
 /**
  * `Option` common operations:
  */
-declare const opt: Option.Option<number>;
+const opt: Option.Option<number> = Option.some(42);
 
 if (Option.isSome(opt)) {
   opt.value;
@@ -61,51 +60,51 @@ Option.getOrNull(opt);
 Option.getOrUndefined(opt);
 
 /**
- * `Either`
+ * `Result`
  *
- * Very similar to Option is Either:
- * Either is a datatype that represents a value that may be one of two types.
+ * Very similar to Option is Result:
+ * Result is a datatype that represents a value that may be one of two types.
  *
- * Option is really just an Either where the left type is void
+ * Option is really just a Result where the failure type is void
  */
 
-const left: Either.Either<never, number> = Either.left(1);
-const right: Either.Either<string, never> = Either.right("error");
+const failure: Result.Result<never, number> = Result.fail(1);
+const success: Result.Result<string, never> = Result.succeed("error");
 
 /**
- * `Either` common operations:
+ * `Result` common operations:
  */
-declare const _either: Either.Either<number, string>;
-if (Either.isRight(_either)) {
-  _either.right;
+const _result: Result.Result<number, string> = Result.succeed(42);
+if (Result.isSuccess(_result)) {
+  _result.success;
 }
-if (Either.isLeft(_either)) {
-  _either.left;
+if (Result.isFailure(_result)) {
+  _result.failure;
 }
-Either.map(_either, (right: number): number => right + 1);
-Either.mapLeft(_either, (left: string): number => left.length);
-Either.mapBoth(_either, {
-  onRight: (x: number): number => x + 1,
-  onLeft: (x: string): number => x.length,
+Result.map(_result, (success: number): number => success + 1);
+Result.mapError(_result, (failure: string): number => failure.length);
+Result.mapBoth(_result, {
+  onSuccess: (x: number): number => x + 1,
+  onFailure: (x: string): number => x.length,
 });
-Either.flatMap(_either, (right: number) => Either.right(right + 1));
-Either.match(_either, {
-  onRight: (x) => x + 1,
-  onLeft: (x) => x + 1,
+Result.flatMap(_result, (success: number) => Result.succeed(success + 1));
+Result.match(_result, {
+  onSuccess: (x) => x + 1,
+  onFailure: (x) => x.length,
 });
 
 /**
  * You might notice that these operations are very similar to Effect operations...
  * That leads to the questions:
  *
- * > 1. When should you use Option/Either and when should you use Effect?
+ * > 1. When should you use Option/Result and when should you use Effect?
  * > 2. And how to you convert from one to the other?
  *
  * ---
  *
  * One key distinction is that
  * - `Effect` operations are lazy,
- * - while `Option | Either` operations are eager!
+ * - while `Option | Result` operations are eager!
  */
 const sideEffect = (x: number) => {
   console.log("side effect!");
@@ -122,31 +121,31 @@ const effect = pipe(
 );
 
 /**
- * `Either | Option` are eager:
+ * `Result | Option` are eager:
  * The side effect has already happened
  */
-const either = pipe(
-  Either.left(1),
-  Either.mapLeft((x) => sideEffect(x)) // logs 'side effect!'
+const resultValue = pipe(
+  Result.fail(1),
+  Result.mapError((x) => sideEffect(x)) // logs 'side effect!'
 );
 
 /**
- * When should you use Option/Either?
+ * When should you use Option/Result?
  *
  * 1. To Interop with non-effect code:
- * 	Because option/either are purely synchronous, they are great for interoping
+ * 	Because option/result are purely synchronous, they are great for interoping
  * 	with non-effect code while still preserving the benefits of typed errors and
  * 	composable operations
  *
  * 2. When you just need to represent DATA:
  * 	- Effects represent computations
- * 	- Option/Either represent data: if you have a value that is either present or not, or is one of two types.
+ * 	- Option/Result represent data: if you have a value that is either present or not, or is one of two types.
  */
 
 /**
  * even if It's for things that are not side effects, or don't require any services
  */
-declare function doLogicThatMightFail1(): Either.Either<string, Error>;
+declare function doLogicThatMightFail1(): Result.Result<string, Error>;
 
 /**
  * if this can be an effect, make it an effect
@@ -156,63 +155,58 @@ declare function doLogicThatMightFail2(): Effect.Effect<string, Error>;
 /**
  * How do you convert from one to the other?
  *
- * `Option` and `Either` are conveniently both subtypes of `Effect`,
- * meaning they can be used interchangeably in any Effect context
+ * In effect v4, `Option` and `Result` are both `Yieldable`,
+ * meaning they can be used with `yield*` inside generators
+ *
+ * To convert them into an Effect value, use the constructors on `Effect`:
  *
  * `Option<T>` -> `Effect<T, NoSuchElementException>`
- * `Either<E, A>` -> `Effect<A, E>`
+ * `Result<E, A>` -> `Effect<A, E>`
  */
 
 const result = pipe(
-  Option.some(5),
-  Effect.flatMap((x) => Either.right(x.toString()))
+  Effect.fromOption(Option.some(5)),
+  Effect.flatMap((x) => Effect.succeed(x.toString()))
 );
 
 /**
- * Next is `Exit`, which is basically a `Either<A, Cause<E>>`
+ * Next is `Exit`, which is basically a `Result<A, Cause<E>>`
  * It is used to represent the result of a computation
  */
 
 const program = Effect.runSyncExit(Effect.succeed(1));
 
 Exit.match(program, {
-  onFailure: (cause) =>
-    console.error(`Exited with failure state: ${cause._tag}`),
+  onFailure: (cause) => console.error(`Exited with failure state: ${cause}`),
   onSuccess: (value) => console.log(`Exited with success value: ${value}`),
 });
 
 /**
  * What is a `Cause`?
- * It is a discriminated union of all the possible ways a computation can complete
+ * In v4 it is a flat collection of all the possible ways a computation can complete
  *
- * Its variations are:
- * - `Empty` => (no error),
+ * A `Cause` wraps an array of `Reason`s, and its variations are:
  * - `Fail` => (expected error),
  * - `Die` => (unexpected error),
  * - `Interrupt`
- * - `Sequential` =>  (multiple causes that happened in sequence)
- * - `Parallel` => (multiple causes that happened in parallel)
  */
 
-declare const cause: Cause.Cause<number>;
-Cause.match(cause, {
-  onEmpty: undefined,
-  onFail: (error: number): unknown => {
-    throw new Error("Function not implemented.");
-  },
-  onDie: (defect: unknown): unknown => {
-    throw new Error("Function not implemented.");
-  },
-  onInterrupt: (fiberId: FiberId): unknown => {
-    throw new Error("Function not implemented.");
-  },
-  onSequential: (left: unknown, right: unknown): unknown => {
-    throw new Error("Function not implemented.");
-  },
-  onParallel: (left: unknown, right: unknown): unknown => {
-    throw new Error("Function not implemented.");
-  },
-});
+const cause: Cause.Cause<number> = Cause.fail(42);
+for (const reason of cause.reasons) {
+  switch (reason._tag) {
+    case "Fail": {
+      const error: number = reason.error;
+      break;
+    }
+    case "Die": {
+      const defect: unknown = reason.defect;
+      break;
+    }
+    case "Interrupt": {
+      break;
+    }
+  }
+}
 
 /**
  * Duration is a datatype that represents a time duration
@@ -226,7 +220,7 @@ Duration.seconds(1);
 Duration.minutes(1);
 Duration.zero;
 Duration.infinity;
-Duration.decode("7 hours");
+Duration.fromInputUnsafe("7 hours");
 
 /**
  * Duration destructors
@@ -237,8 +231,8 @@ Duration.toSeconds(Duration.seconds(1));
 /**
  * Duration operations
  */
-Duration.lessThan(Duration.millis(1000), Duration.seconds(1));
-Duration.greaterThan(Duration.millis(1000), Duration.seconds(1));
+Duration.isLessThan(Duration.millis(1000), Duration.seconds(1));
+Duration.isGreaterThan(Duration.millis(1000), Duration.seconds(1));
 Duration.sum(Duration.millis(1000), Duration.seconds(1));
 Duration.times(Duration.millis(1000), 4);
 
@@ -246,7 +240,6 @@ Duration.times(Duration.millis(1000), 4);
  * Effect also has a number of data structures
  * They are all functional and immutable
  *
- * - List: a linked list,
  * - HashMap,
  * - HashSet,
  * - RedBlackTree,
@@ -272,17 +265,21 @@ Chunk.toReadonlyArray(c4);
  * All values have a default implementation, but you can provide your own for custom types.
  * This is commonly used for checking deep equality of data structures and for
  * using values as keys in a Map or Set.
+ *
+ * Note: in effect v4 `Equal.equals` uses structural equality by default!
  */
 
 const s1 = new Set<Chunk.Chunk<number>>();
 s1.add(Chunk.make(1, 2, 3));
 s1.add(Chunk.make(1, 2, 3));
-console.log("s1", s1.size); // 2 because of referentially equality
+console.log("s1", s1.size); // 2 because native Sets compare by reference
 
 let s2 = HashSet.empty<Chunk.Chunk<number>>();
 s2 = HashSet.add(s2, Chunk.make(1, 2, 3));
 s2 = HashSet.add(s2, Chunk.make(1, 2, 3));
 console.log("s2", HashSet.size(s2)); // 1 because of structural equality
+
+console.log(Equal.equals({ a: 1 }, { a: 1 })); // true in v4! plain objects compare structurally
 
 /**
  * To 'implement' a trait you just provide a function with the 'equals' or 'hash' symbol
@@ -318,30 +315,26 @@ s3 = HashSet.add(s3, new Foo1(1));
 s3 = HashSet.add(s3, new Foo1(1));
 s3 = HashSet.add(s3, new Foo2(1));
 s3 = HashSet.add(s3, new Foo2(1));
-console.log("s3", HashSet.size(s3)); // 3 because Foo2 are considered equal
-console.log(Equal.equals(new Foo1(1), new Foo1(1))); // false
-console.log(Equal.equals(new Foo2(1), new Foo2(1))); // true
+console.log("s3", HashSet.size(s3)); // 2! in v4 even plain class instances compare structurally
+console.log(Equal.equals(new Foo1(1), new Foo1(1))); // true in v4 (structural by default)
+console.log(Equal.equals(new Foo2(1), new Foo2(1))); // true (custom Equal implementation)
 
 /**
  * The Data module contains a number of functions that implement deep equality
  * and hashing for custom types for you.
+ *
+ * Since plain objects are compared structurally by default in v4,
+ * Data is mostly useful for classes now:
  */
 interface Foo3 {
   readonly a: number;
   readonly b: string;
 }
 
-const Foo3 = Data.case<Foo3>();
-const f3 = Foo3({ a: 1, b: "a" });
-
-interface TaggedFoo3 {
-  readonly _tag: "Foo3";
-  readonly a: number;
-  readonly b: string;
-}
-
-const TaggedFoo3 = Data.tagged<TaggedFoo3>("Foo3");
-const tf3 = TaggedFoo3({ a: 1, b: "a" });
+// plain objects already have structural equality in v4
+const f3a: Foo3 = { a: 1, b: "a" };
+const f3b: Foo3 = { a: 1, b: "a" };
+console.log(Equal.equals(f3a, f3b)); // true
 
 /**
  * or in one step with classes
@@ -397,7 +390,9 @@ const state4 = Loading({ status: "loading" });
 console.log(Equal.equals(state2, state4)); // true
 console.log(Equal.equals(state2, state3)); // false
 
-declare const state: AppState;
+// pretend this came from somewhere else (so the tag isn't statically known)
+const makeState = (s: AppState): AppState => s;
+const state = makeState(Loading({ status: "loading" }));
 switch (state._tag) {
   case "Startup":
     break;

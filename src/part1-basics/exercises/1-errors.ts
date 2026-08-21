@@ -1,4 +1,4 @@
-import { Array, Effect, Either, Option } from "effect";
+import { Array, Effect, Result } from "effect";
 import * as T from "../../testDriver.ts";
 
 /**

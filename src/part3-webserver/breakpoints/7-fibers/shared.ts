@@ -1,31 +1,34 @@
 import { createServer } from "node:http";
-import { type ConfigError, Context, Effect, HashMap, Layer, Ref } from "effect";
+import { Context, Effect, HashMap, Layer, Ref } from "effect";
+import type { ConfigError } from "effect/Config";
 import { WebSocketServer } from "ws";
 
 import * as C from "./config.ts";
 import * as M from "./model.ts";
 
-export class HttpServer extends Context.Tag("HttpServer")<
+export class HttpServer extends Context.Service<
   HttpServer,
   ReturnType<typeof createServer>
->() {
+>()("HttpServer") {
   static readonly Live = Layer.sync(HttpServer, createServer);
 }
 
-export class WSSServer extends Context.Tag("WSSServer")<
-  WSSServer,
-  WebSocketServer
->() {
+export class WSSServer extends Context.Service<WSSServer, WebSocketServer>()(
+  "WSSServer"
+) {
   static readonly Live = Layer.effect(
     WSSServer,
-    HttpServer.pipe(Effect.map((server) => new WebSocketServer({ server })))
+    Effect.gen(function* () {
+      const server = yield* HttpServer;
+      return new WebSocketServer({ server });
+    })
   );
 }
 
-export class CurrentConnections extends Context.Tag("CurrentConnections")<
+export class CurrentConnections extends Context.Service<
   CurrentConnections,
   Ref.Ref<HashMap.HashMap<string, M.WebSocketConnection>>
->() {
+>()("CurrentConnections") {
   static readonly Live = Layer.effect(
     CurrentConnections,
     Ref.make(HashMap.empty<string, M.WebSocketConnection>())
@@ -34,7 +37,7 @@ export class CurrentConnections extends Context.Tag("CurrentConnections")<
 
 export const ListenLive: Layer.Layer<
   never,
-  ConfigError.ConfigError,
+  ConfigError,
   CurrentConnections | HttpServer
 > = Layer.effectDiscard(
   Effect.gen(function* () {

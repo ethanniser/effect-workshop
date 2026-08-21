@@ -19,7 +19,7 @@ class MockFile {
   static readonly open = (fd: number) =>
     pipe(
       T.logTest(`open ${fd}`),
-      Effect.andThen(() => new MockFile(fd))
+      Effect.andThen(Effect.succeed(new MockFile(fd)))
     );
 }
 

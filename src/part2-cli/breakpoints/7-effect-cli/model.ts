@@ -8,7 +8,7 @@ export class TextDecodeError extends Data.TaggedError("TextDecodeError") {}
 
 export class HeaderParseError extends Data.TaggedError("HeaderParseError") {}
 
-export class CLIOptions extends Context.Tag("CLIOptions")<
+export class CLIOptions extends Context.Service<
   CLIOptions,
   {
     readonly url: string;
@@ -18,7 +18,7 @@ export class CLIOptions extends Context.Tag("CLIOptions")<
     readonly output: Option.Option<string>;
     readonly include: Option.Option<boolean>;
   }
->() {}
+>()("CLIOptions") {}
 
 export class CliOptionsParseError extends Data.TaggedError(
   "CliOptionsParseError"

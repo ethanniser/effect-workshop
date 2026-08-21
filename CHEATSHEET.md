@@ -28,18 +28,18 @@ An `Effect` is a immutable value which describes some program that may require s
 
 ## Creating Effects
 
-| **Function**            | **Input**                          | **Output**                    |
-| ----------------------- | ---------------------------------- | ----------------------------- |
-| `succeed`               | `A`                                | `Effect<A>`                   |
-| `fail`                  | `E`                                | `Effect<never, E>`            |
-| `sync`                  | `() => A`                          | `Effect<A>`                   |
-| `try`                   | `() => A`                          | `Effect<A, UnknownException>` |
-| `try` (overload)        | `() => A`, `unknown => E`          | `Effect<A, E>`                |
-| `promise`               | `() => Promise<A>`                 | `Effect<A>`                   |
-| `tryPromise`            | `() => Promise<A>`                 | `Effect<A, UnknownException>` |
-| `tryPromise` (overload) | `() => Promise<A>`, `unknown => E` | `Effect<A, E>`                |
-| `async`                 | `(Effect<A, E> => void) => void`   | `Effect<A, E>`                |
-| `suspend`               | `() => Effect<A, E, R>`            | `Effect<A, E, R>`             |
+| **Function**            | **Input**                          | **Output**                        |
+| ----------------------- | ---------------------------------- | --------------------------------- |
+| `succeed`               | `A`                                | `Effect<A>`                       |
+| `fail`                  | `E`                                | `Effect<never, E>`                |
+| `sync`                  | `() => A`                          | `Effect<A>`                       |
+| `try`                   | `() => A`                          | `Effect<A, Cause.UnknownError>`   |
+| `try` (overload)        | `() => A`, `unknown => E`          | `Effect<A, E>`                    |
+| `promise`               | `() => Promise<A>`                 | `Effect<A>`                       |
+| `tryPromise`            | `() => Promise<A>`                 | `Effect<A, Cause.UnknownError>`   |
+| `tryPromise` (overload) | `() => Promise<A>`, `unknown => E` | `Effect<A, E>`                    |
+| `callback`              | `(Effect<A, E> => void) => void`   | `Effect<A, E>`                    |
+| `suspend`               | `() => Effect<A, E, R>`            | `Effect<A, E, R>`                 |
 
 NOTE: `sync` and `promise` are for functions that will **NEVER** throw/reject. If they do, it will be considered a 'defect' (similar to a panic).
 
@@ -133,10 +133,10 @@ Effect.gen(function* () {
 
 | **Function**  | **Input**                                                            | **Output**                                 | **Description**                       |
 | ------------- | -------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------- |
-| `catchAll`    | `Effect<A, E1, R>`, `E1 => Effect<B, E2, R>`                         | `Effect<A \| B, E2, R>`                    | Recovering from all errors            |
-| `catchTag`    | `Effect<A, E, R>`, `string`, `TaggedError => Effect<B, E2, R>`       | `Effect<A \| B, Exclude<E, tag> \| E2, R>` | Recovering from specific tagged error |
-| `catchAll`    | `Effect<A, E1, R>`, `E1 => Option<Effect<B, E2, R>>`                 | `Effect<A \| B, E1 \| E2, R>`              | Recovering from some errors           |
-| `either`      | `Effect<A, E, R>`                                                    | `Effect<Either<A, E>, never, R>`           | Move error into success 'channel'     |
+| `catch`       | `Effect<A, E1, R>`, `E1 => Effect<B, E2, R>`                         | `Effect<A \| B, E2, R>`                    | Recovering from all errors            |
+| `catchTag`    | `Effect<A, E, R>`, `string \| string[]`, `TaggedError => Effect<B, E2, R>` | `Effect<A \| B, Exclude<E, tag> \| E2, R>` | Recovering from specific tagged error |
+| `catchIf`     | `Effect<A, E1, R>`, predicate, `E1 => Effect<B, E2, R>`              | `Effect<A \| B, E1 \| E2, R>`              | Recovering from some errors           |
+| `result`      | `Effect<A, E, R>`                                                    | `Effect<Result<A, E>, never, R>`           | Move error into success 'channel'     |
 | `match`       | `Effect<A, E, R>`, `A => B`, `E => C`                                | `Effect<B \| C, never, R>`                 | Handle both cases at once             |
 | `matchEffect` | `Effect<A, E1, R>`, `A => Effect<B, E2, R>`, `E1 => Effect<C, E3, R>` | `Effect<B \| C, E2 \| E3, R>`              | Handle both cases with `Effect`s      |
 
@@ -145,7 +145,7 @@ Effect.gen(function* () {
 ### Defining a service
 
 ```ts
-class Foo extends Context.Tag("Foo")<Foo, { bar: string }>() {}
+class Foo extends Context.Service<Foo, { bar: string }>()("Foo") {}
 ```
 
 ### Using a service
@@ -170,10 +170,11 @@ Effect.runSync(Effect.provideService(main, Foo, { bar: "Hello World!" })); // lo
 ### Service that requires other services
 
 ```ts
-class Bar extends Context.Tag("Bar")<Bar, { baz: number }>() {
+class Bar extends Context.Service<Bar, { baz: number }>()("Bar") {
   // Live: Layer<Bar, never, Foo>
   static Live = Layer.effect(
-    Foo.pipe(Effect.map((foo) => ({ baz: foo.bar.length })))
+    Bar,
+    Effect.map(Foo, (foo) => ({ baz: foo.bar.length }))
   );
 }
 ```
@@ -239,11 +240,13 @@ Equal.equals(new Foo(1), new Foo(1)); // true
 | **Data Type**                  | **Description**                                                                         |
 | ------------------------------ | --------------------------------------------------------------------------------------- |
 | `Option<T>`                    | Describes a union between `Some<T>` and `None`                                          |
-| `Either<A, E>`                 | Describes a union between `Right<A>` and `Left<E>`                                      |
+| `Result<A, E>`                 | Describes a union between `Success<A>` and `Failure<E>`                                 |
 | `Exit<A, E>`                   | Describes a union between `A` and `Cause<E>`                                            |
-| `Cause<E>`                     | Describes a union of the ways a program might fail with error `E`                       |
+| `Cause<E>`                     | A flat collection of `Reason`s (`Fail`, `Die`, `Interrupt`) describing how a program failed |
 | `Chunk<A>`                     | A lazy, immutable, functional, array-like data structure                                |
 | `HashSet<A>` / `HashMap<K, V>` | Functional and immutable, uses custom `Hash` and `Equal` implementations when available |
+
+Note: in effect v4, `Equal.equals` compares plain objects/arrays structurally by default.
 
 ## Other Useful Things
 

@@ -75,13 +75,13 @@ Effect.runSync(four);
 import fs from "node:fs/promises";
 
 const acquire = Effect.tryPromise({
-  try: () => fs.open("1-what-is-a-program.js", "r"),
+  try: () => fs.open(new URL("./1-what-is-a-program.js", import.meta.url), "r"),
   catch: (e) => new Error("Failed to open file"),
-}).pipe(Effect.zipLeft(Console.log("File opened")));
+}).pipe(Effect.tap(() => Console.log("File opened")));
 
 const release = (file: fs.FileHandle) =>
   Effect.promise(() => file.close()).pipe(
-    Effect.zipLeft(Console.log("File closed"))
+    Effect.tap(() => Console.log("File closed"))
   );
 
 const file = Effect.acquireRelease(acquire, release);

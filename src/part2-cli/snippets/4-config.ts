@@ -1,11 +1,5 @@
-import {
-  Config,
-  type ConfigError,
-  ConfigProvider,
-  Effect,
-  Layer,
-  pipe,
-} from "effect";
+import { Config, ConfigProvider, Effect, pipe } from "effect";
+import type { ConfigError } from "effect/Config";
 
 /**
  * Configuration is an important part of any application.
@@ -24,9 +18,9 @@ const HOST = Config.string("HOST");
 const LOG_LEVEL = Config.logLevel("LOG_LEVEL");
 
 /**
- * Configs are subtype of `Effect` so to get their value just use them in any effect context
+ * `Config` is yieldable so to get their value just use them in any effect context
  */
-const program: Effect.Effect<void, ConfigError.ConfigError, never> = Effect.gen(
+const program: Effect.Effect<void, ConfigError, never> = Effect.gen(
   function* () {
     const port: number = yield* PORT;
     const host: string = yield* HOST;
@@ -72,20 +66,18 @@ const nested = Config.nested(config, "WEB"); // now maps to `WEB_PORT`, `WEB_HOS
  * Config has a completely swappable backend with the `ConfigProvider` interface
  * The default backend simply reads from `process.env`
  *
- * You can provide your own, for example, from a `Map`
+ * You can provide your own, for example, from an object
  */
 
 const main = pipe(
   program,
   Effect.provide(
-    Layer.setConfigProvider(
-      ConfigProvider.fromMap(
-        new Map([
-          ["PORT", "3000"],
-          ["HOST", "localhost"],
-          ["LOG_LEVEL", "info"],
-        ])
-      )
+    ConfigProvider.layer(
+      ConfigProvider.fromUnknown({
+        PORT: "3000",
+        HOST: "localhost",
+        LOG_LEVEL: "info",
+      })
     )
   )
 );
@@ -94,15 +86,11 @@ const main = pipe(
  * Other backends
  */
 ConfigProvider.fromEnv;
-ConfigProvider.fromMap;
-ConfigProvider.fromJson;
-ConfigProvider.fromFlat;
+ConfigProvider.fromUnknown;
+ConfigProvider.fromDotEnv;
+ConfigProvider.fromDotEnvContents;
 
 /**
- * converting between key 'case' styles
+ * converting between key 'case' styles, e.g. camelCase keys reading SCREAMING_SNAKE_CASE env vars
  */
-ConfigProvider.kebabCase;
-ConfigProvider.snakeCase;
 ConfigProvider.constantCase;
-ConfigProvider.lowerCase;
-ConfigProvider.upperCase;

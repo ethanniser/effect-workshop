@@ -12,7 +12,7 @@ import { Console, Effect, Schedule } from "effect";
 /**
  * Schedules have a few basic constructors
  */
-Schedule.once;
+Schedule.recurs(1); // once
 Schedule.forever;
 Schedule.recurs(5);
 Schedule.spaced("1 seconds");
@@ -20,38 +20,49 @@ Schedule.fixed("1 seconds");
 // how might these two schedules differ?
 Schedule.exponential("1 seconds", 1.2);
 Schedule.fibonacci("1 seconds");
+Schedule.during("30 seconds"); // keep recurring for a duration
 
 // using input (most often the result or error of the effect) to determine the next repetition
-Schedule.recurWhile((n: number) => n < 10);
+declare const isRetryable: (n: number) => boolean;
+Schedule.recurs(5).pipe(
+  Schedule.setInputType<number>(),
+  Schedule.while(({ input }) => isRetryable(input))
+);
 // many more possibilities here
 
 /**
  * specifying output
  */
-Schedule.repetitions(Schedule.spaced("1 seconds"));
+Schedule.map(Schedule.spaced("1 seconds"), (attempts) => attempts);
 // again, many more possibilities here
 
 /**
  * Schedules are composable
+ * `min` continues while ANY of the schedules continue (fastest delay wins)
+ * `max` continues while ALL of the schedules continue (slowest delay wins)
  */
 
-Schedule.union(
+Schedule.min([
   Schedule.spaced("1 seconds"),
   Schedule.exponential("200 millis", 1.2)
-);
+]);
 
-Schedule.intersect(
+Schedule.max([
   Schedule.spaced("1 seconds"),
   Schedule.exponential("200 millis", 1.2)
-);
+]);
 
-Schedule.andThen(Schedule.recurs(5), Schedule.spaced("1 seconds"));
+Schedule.concat(Schedule.recurs(5), Schedule.spaced("1 seconds"));
 
 /**
  * using output: filtering + tapping
  */
-Schedule.whileOutput(Schedule.spaced("1 seconds"), (n) => n < 10);
-Schedule.tapOutput(Schedule.spaced("1 seconds"), (n) => Console.log(n));
+Schedule.spaced("1 seconds").pipe(
+  Schedule.while(({ duration }) => duration !== undefined)
+);
+Schedule.tap(Schedule.spaced("1 seconds"), (meta) =>
+  Console.log(meta.duration)
+);
 
 /**
  * Using schedules

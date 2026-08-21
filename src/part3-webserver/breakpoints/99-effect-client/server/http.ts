@@ -1,12 +1,13 @@
+import { NodeHttpServer } from "@effect/platform-node";
+import { Effect, Layer, pipe } from "effect";
+import type { ConfigError } from "effect/Config";
 import {
   HttpMiddleware,
   HttpRouter,
   HttpServer,
   type HttpServerError,
   HttpServerResponse,
-} from "@effect/platform";
-import { NodeHttpServer } from "@effect/platform-node";
-import { type ConfigError, Effect, Layer, pipe } from "effect";
+} from "effect/unstable/http";
 
 import * as C from "../shared/config.ts";
 import * as M from "./model.ts";
@@ -15,33 +16,37 @@ import { type ConnectionStore, getAvailableColors } from "./shared.ts";
 
 export const HTTPServerLive: Layer.Layer<
   HttpServer.HttpServer,
-  ConfigError.ConfigError | HttpServerError.ServeError,
+  ConfigError | HttpServerError.ServeError,
   NodeServer
-> = Layer.scoped(
+> = Layer.effect(
   HttpServer.HttpServer,
-  NodeServer.pipe(
-    Effect.zip(C.PORT),
+  Effect.gen(function* () {
+    const server = yield* NodeServer;
+    const port = yield* C.PORT;
+    return yield* NodeHttpServer.make(() => server, { port });
+  })
+);
 
-    Effect.flatMap(([server, port]) =>
-      NodeHttpServer.make(() => server, { port })
-    )
-  )
+const Routes = HttpRouter.use(
+  Effect.fn(function* (router) {
+    yield* router.add(
+      "GET",
+      "/colors",
+      Effect.flatMap(getAvailableColors, (colors) =>
+        pipe(
+          M.AvailableColorsResponse.make({ _tag: "availableColors", colors }),
+
+          HttpServerResponse.schemaJson(M.AvailableColorsResponse)
+        )
+      )
+    );
+  })
 );
 
 export const HttpLive: Layer.Layer<
   never,
   never,
   HttpServer.HttpServer | ConnectionStore
-> = HttpRouter.empty.pipe(
-  HttpRouter.get(
-    "/colors",
-    Effect.flatMap(getAvailableColors, (colors) =>
-      pipe(
-        M.AvailableColorsResponse.make({ _tag: "availableColors", colors }),
-
-        HttpServerResponse.schemaJson(M.AvailableColorsResponse)
-      )
-    )
-  ),
-  HttpServer.serve(HttpMiddleware.logger)
-);
+> = HttpRouter.serve(Routes, {
+  middleware: HttpMiddleware.logger,
+});

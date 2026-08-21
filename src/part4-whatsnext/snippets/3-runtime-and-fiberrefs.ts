@@ -4,17 +4,17 @@ import {
   Effect,
   Exit,
   Fiber,
-  FiberRef,
-  FiberRefs,
   Layer,
-  Runtime,
-  Scope,
+  ManagedRuntime,
+  References,
   pipe,
 } from "effect";
 
 /**
- * A `Runtime<R>` can run effects of type `Runnable extends Effect<any, any, R>`.
- * The runtime is whats responsible for
+ * In effect v4 the `Runtime<R>` type is gone.
+ * Run functions live directly on `Effect`, and services are passed as a `Context`.
+ *
+ * The runtime is still whats responsible for
  * - executing effects,
  * - spawning fibers,
  * - handling unexpected errors,
@@ -23,42 +23,29 @@ import {
  * - ensuring all finalizers are run,
  * - and handling all async operations.
  *
- * All effects up to now have been executed with the default runtime, `Runtime.defaultRuntime`.
+ * All effects up to now have been executed with the default runtime.
  * Effect.runSync is actually equivalent to `<A, E>(effect: Effect.Effect<A, E, never>) => A`
  */
-const runSync = Runtime.runSync(Runtime.defaultRuntime);
 
 /**
- * Q: What is a `Runtime`?
+ * Q: What replaces a `Runtime`?
  *
  * We can think of it as a black box that takes in a starting `Context<R>` and `Effect<A, E, R>` as input
  * and produces an `Exit<A, E>` as output.
  *
- * Lets look how to create one:
+ * To run an effect with some services, extract the context with `Effect.context`
+ * inside a provided scope, then use the `*With(services)` variants of the run functions.
  */
 
-const rt: Runtime.Runtime<never> = Runtime.make({
-  context: Context.empty(),
-  fiberRefs: FiberRefs.empty(),
-  runtimeFlags: Runtime.defaultRuntimeFlags,
-});
-
-/**
- * We'll get to fiberRefs and runtimeFlags in a second, for now lets look at the `Context`.
- *
- * When we construct a runtime with an empty context, it produces a `Runtime<never>`.
- * This means that the runtime can only run effects that require no services.
- */
-
-// But are running multiple effects seperately, that all require the same services
+// But are running multiple effects separately, that all require the same services
 // The most common example of this is integrating effect with non-effect code
 // consider this example
 
-class Database extends Context.Tag("Database")<
+class Database extends Context.Service<
   Database,
   { getUserById: (id: number) => Effect.Effect<string, Error> }
->() {
-  static readonly Live = Layer.scoped(
+>()("Database") {
+  static readonly Live = Layer.effect(
     Database,
     Effect.acquireRelease(
       Effect.sync(() => {
@@ -99,123 +86,104 @@ const handler = async (req: Request): Promise<Response> => {
 
 /**
  * As it is currently implemented, our database is getting constructed every time we run the handler!
- * We can fix this by creating a runtime with the database as a service
- * and then running our effects with that runtime.
+ * The v4 fix is to build the context once (via a Layer) and reuse it.
  *
  * If the service is not effectful to create (i.e. you don't need a Layer),
- * we can simply provide it in the context when creating the runtime
+ * we can simply build the Context directly and run effects with `runPromiseExitWith`
  */
 
-const customRuntime = Runtime.make({
-  context: Context.empty().pipe(
-    Context.add(Database, {
-      getUserById: (id: number) => Effect.succeed(`user ${id}`),
-    })
-  ),
-  fiberRefs: FiberRefs.empty(),
-  runtimeFlags: Runtime.defaultRuntimeFlags,
+const customContext = Context.make(Database, {
+  getUserById: (id: number) => Effect.succeed(`user ${id}`),
 });
 
-Runtime.runPromiseExit(customRuntime)(handlerEffect(1)); // look ma, no provide!
+void Effect.runPromiseExitWith(customContext)(handlerEffect(1)); // look ma, no provide!
 
 /**
  * For more complex services, we can use layers to create the context.
- * Then use `Layer.runtime` to create the runtime effectfully.
- * One additional detail is, because our layers might be scoped, we need some way to close that scope
- * (because they aren't just closed when the effect is done)
- * so we can manually create and close a scope when we are finished using the runtime.
+ * `ManagedRuntime` builds one from a Layer, keeps the layer alive for you,
+ * and exposes the same run functions - perfect for non-Effect entrypoints.
  */
 
-const scope: Scope.CloseableScope = Effect.runSync(Scope.make());
+const runtime = ManagedRuntime.make(Database.Live);
 
-const effectfulCustomRuntime: Runtime.Runtime<Database> =
-  await Effect.runPromise(
-    pipe(Database.Live, Layer.toRuntime, Scope.extend(scope))
-  );
-
-Runtime.runPromiseExit(effectfulCustomRuntime)(handlerEffect(1));
+await runtime.runPromise(handlerEffect(1));
 
 /**
- * When we're done with the runtime, we can close the scope
+ * When we're done with the managed runtime, we should dispose it so finalizers run
  */
-Effect.runFork(Scope.close(scope, Exit.void));
+await runtime.dispose();
 
 /**
- * Next up is `FiberRefs`, which is really just a collection of `FiberRef`s.
+ * Next up are `Context.Reference`s (formerly known as `FiberRef`s).
  *
- * A `FiberRef` is a mutable reference that is local to a single fiber (like a thread-local variable)
+ * A reference is a value that is local to a single fiber (like a thread-local variable)
  * They are useful for storing contextual state, with a sensible default value.
  *
  * Consider many things we have encountered so far:
- * concurrency level, log level, context - these are all stored in a `FiberRef`
- * tracing is also a great example of a `FiberRef`, where we store the current span in a `FiberRef`
+ * concurrency level, log level, context - these all live in references
+ * tracing is also a great example: the current span is stored in a reference.
  *
- *
+ * Many built-in references are exported from the `References` module,
+ * like `References.MinimumLogLevel`.
  *
  * Q: how do they actually work?
  *
- * A `FiberRef` is really just an identifier with an initial value.
- * By default, the value of a `FiberRef` is the initial value
- * Each fiber has its own map of `FiberRef`s to values
- * When we modify a `FiberRef`, we are only modifying the value for the current fiber.
+ * A reference is really just an identifier with a default value.
+ * By default, reading a reference yields the default value.
+ * Each fiber has its own map of references to values.
+ * When we modify a reference (with `Effect.provideService` or `updateService`),
+ * we are only modifying the value for the current fiber (and its children).
  */
 
 {
-  const program = Effect.gen(function* () {
-    const annotation: FiberRef.FiberRef<string | null> = yield* FiberRef.make<
-      string | null
-    >(null);
+  const annotation = Context.Reference<string | null>("annotation", {
+    defaultValue: () => null,
+  });
 
+  const program = Effect.gen(function* () {
     const log = (message: string): Effect.Effect<void, never, never> =>
       Effect.gen(function* () {
-        const currentAnnotation = yield* FiberRef.get(annotation);
+        const currentAnnotation: string | null = yield* annotation;
         console.log(`${currentAnnotation ?? ""} - ${message}`);
       });
 
-    const fiber1: Fiber.RuntimeFiber<void, never> = yield* pipe(
-      Effect.gen(function* () {
-        yield* FiberRef.set(annotation, "fiber1");
-        yield* log("hello from fiber1");
-      }),
-      Effect.fork
+    const fiber1: Fiber.Fiber<void, never> = yield* pipe(
+      log("hello from fiber1").pipe(Effect.provideService(annotation, "fiber1")),
+      Effect.forkChild
     );
 
-    const fiber2: Fiber.RuntimeFiber<void, never> = yield* pipe(
-      Effect.gen(function* () {
-        yield* FiberRef.set(annotation, "fiber2");
-        yield* log("hello from fiber2");
-      }),
-      Effect.fork
+    const fiber2: Fiber.Fiber<void, never> = yield* pipe(
+      log("hello from fiber2").pipe(Effect.provideService(annotation, "fiber2")),
+      Effect.forkChild
     );
 
     yield* Fiber.joinAll([fiber1, fiber2]);
 
-    const mainFiberFinalAnnotation: string | null =
-      yield* FiberRef.get(annotation);
+    const mainFiberFinalAnnotation: string | null = yield* annotation;
 
     console.log(`final annotation: ${mainFiberFinalAnnotation}`);
   }).pipe(Effect.scoped);
 
-  Effect.runPromise(program);
+  void Effect.runPromise(program);
 }
 
 /**
  * Notice how the annotation is different for each fiber,
- * and the main fiber does NOT have its initial value as the final value.
+ * and the main fiber does NOT see the values set by its children.
  *
- * This is because FiberRefs have well defined `fork` and `join` semantics;
- *
- * - When a fiber is `forked`, the new fiber gets a copy of the current fibers `FiberRef` values,
- * 	but this can be customized per `FiberRef`.
- *
- * - When a fiber is `joined`, the values of the joined fibers are merged into the current fibers values
- * 	again, this can be customized per `FiberRef`.
+ * In v3 FiberRefs had well defined `fork` and `join` semantics where joined
+ * fibers could merge values back into their parent. In v4 references are
+ * simply inherited: setting a reference via `provideService` scopes that value
+ * to the provided effect and its forked children only.
  *
  * ___
  *
- * So when we create a runtime, we have the opportunity to set the initial values of the `FiberRef`s
- * for 'main' fibers created by that runtime.
- *
- * Finally, the `RuntimeFlags` is a number representing bitflags that control ultra low-level runtime behavior
- * check out the api docs for more info if you are interested.
+ * Finally, if you want to read ALL services available to the current fiber,
+ * you can use `Effect.context`, and modify them with `Effect.updateContext`.
  */
+
+const readContext = Effect.gen(function* () {
+  const context = yield* Effect.context<Database>();
+  const db = Context.get(context, Database);
+  return yield* db.getUserById(42);
+});

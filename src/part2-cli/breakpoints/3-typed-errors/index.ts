@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import { Console, Effect, Exit, Option, pipe } from "effect";
-import type { UnknownException } from "effect/Cause";
+import type { UnknownError as CauseUnknownError } from "effect/Cause";
 import meow from "meow";
 
 import * as M from "./model.ts";
@@ -69,14 +69,14 @@ function main(
   options?: CLIOptions
 ): Effect.Effect<
   void,
-  M.HeaderParseError | M.UnknownError | M.TextDecodeError | UnknownException,
+  M.HeaderParseError | M.UnknownError | M.TextDecodeError | CauseUnknownError,
   never
 > {
   return Effect.gen(function* () {
     const headers: [key: string, value: string][] = options?.headers
       ? yield* Effect.reduce(
           options.headers,
-          new Array<[string, string]>(),
+          () => new Array<[string, string]>(),
           (acc, header) => {
             const [key, value] = header.split(":");
             if (!key || !value) {
@@ -118,10 +118,10 @@ function main(
     buffer.push(text);
 
     const finalString = buffer.join("\n");
-    yield* Effect.matchEffect(Option.fromNullable(options?.output), {
-      onSuccess: (output) =>
+    yield* Option.match(Option.fromNullishOr(options?.output), {
+      onSome: (output) =>
         Effect.tryPromise(() => fs.writeFile(output, finalString)),
-      onFailure: () => Console.log(finalString),
+      onNone: () => Console.log(finalString),
     });
   });
 }

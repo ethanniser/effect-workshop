@@ -1,13 +1,7 @@
-import { HttpServer, type HttpServerError } from "@effect/platform";
-import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import {
-  type ConfigError,
-  Console,
-  Effect,
-  Layer,
-  LogLevel,
-  Logger,
-} from "effect";
+import { NodeServices, NodeRuntime } from "@effect/platform-node";
+import { Console, Effect, Layer, References } from "effect";
+import { HttpServer, type HttpServerError } from "effect/unstable/http";
+import type { ConfigError } from "effect/Config";
 
 import { HTTPServerLive, HttpLive } from "./http.ts";
 import { NodeServer } from "./node.ts";
@@ -42,7 +36,7 @@ const StartMessage: Layer.Layer<
     const wssPort =
       typeof wssAdress === "string" //
         ? wssAdress
-        : wssAdress.port.toString();
+        : (wssAdress?.port ?? 0).toString();
 
     yield* Console.log(`WebSocket server listening on port ${wssPort}`);
   })
@@ -50,16 +44,18 @@ const StartMessage: Layer.Layer<
 
 const MainLive: Layer.Layer<
   never,
-  ConfigError.ConfigError | HttpServerError.ServeError,
+  ConfigError | HttpServerError.ServeError,
   never
-> = ServersLive.pipe(
-  Layer.merge(StartMessage),
+> = Layer.merge(ServersLive, StartMessage).pipe(
   Layer.provide(HTTPServerLive),
   Layer.provide(WSSServer.Live),
   Layer.provide(ConnectionStore.Live),
   Layer.provide(NodeServer.Live),
-  Layer.provide(NodeContext.layer),
-  Layer.provide(Logger.minimumLogLevel(LogLevel.Debug))
+  Layer.provide(NodeServices.layer)
 );
 
-NodeRuntime.runMain(Layer.launch(MainLive));
+NodeRuntime.runMain(
+  Layer.launch(MainLive).pipe(
+    Effect.provideService(References.MinimumLogLevel, "Debug")
+  )
+);

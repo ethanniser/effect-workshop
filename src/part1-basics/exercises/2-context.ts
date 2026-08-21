@@ -1,14 +1,14 @@
 import { Context, Effect, Layer } from "effect";
 import * as T from "../../testDriver.ts";
 
-class Foo extends Context.Tag("Foo")<Foo, { readonly bar: string }>() {
+class Foo extends Context.Service<Foo, { readonly bar: string }>()("Foo") {
   static readonly Live = Layer.succeed(Foo, { bar: "imFromContext!" });
 }
 
 /**
  * # Exercise 1:
  *
- * `Tag` being a subtype of `Effect` is a bit too easy...
+ * `Service` being yieldable is a bit too easy...
  * try to get the `Foo` service from context manually :)
  */
 
@@ -22,7 +22,7 @@ await T.testRunAssert(1, test1, { success: "imFromContext!" });
 /**
  * # Exercise 2
  */
-class Random extends Context.Tag("Random")<
+class Random extends Context.Service<
   Random,
   {
     readonly nextInt: Effect.Effect<number>;
@@ -32,7 +32,7 @@ class Random extends Context.Tag("Random")<
       max: number
     ) => Effect.Effect<number>;
   }
->() {
+>()("Random") {
   static readonly Mock = Layer.succeed(Random, {
     nextInt: Effect.succeed(42),
     nextBool: Effect.succeed(true),

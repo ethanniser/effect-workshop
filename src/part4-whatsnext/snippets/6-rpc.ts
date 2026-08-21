@@ -1,18 +1,15 @@
 import { createServer } from "node:http";
 
-import {
-  FetchHttpClient,
-  HttpClient,
-  HttpClientRequest,
-  HttpMiddleware,
-  HttpRouter,
-  HttpServer,
-  type HttpServerError,
-} from "@effect/platform";
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
-import { Rpc, RpcResolver, RpcRouter } from "@effect/rpc";
-import { HttpRpcResolver, HttpRpcRouter } from "@effect/rpc-http";
-import { Console, Effect, Layer, Schema, Stream } from "effect";
+import { Console, Effect, Layer, Schema, Stream, type Scope } from "effect";
+import { FetchHttpClient, HttpRouter } from "effect/unstable/http";
+import {
+  Rpc,
+  RpcClient,
+  RpcGroup,
+  RpcSerialization,
+  RpcServer,
+} from "effect/unstable/rpc";
 
 /**
  * `rpc` or "remote procedure call" is a way to call a function on a remote server;
@@ -20,18 +17,16 @@ import { Console, Effect, Layer, Schema, Stream } from "effect";
  * all while remaining full type safe.
  * Effect provides its own rpc implementation.
  *
- * It starts by defining a schema for the client and server to use
- * - Requests can return a simple value, or a stream
- * - Requests are constructed with the form: tag, errorSchema, successSchema, inputs
- * 	these are all defined by schemas, instead of types because
- * 	the schemas are used to serialize and deserialize the data over the network
+ * In v4 you define a group of procedures with schemas for their payloads and results:
+ * - Requests can return a simple value, or a stream (with `stream: true`)
+ * - The schemas are used to serialize and deserialize the data over the network
  */
 
 /**
  * request.ts
  */
-class Todo extends Schema.TaggedClass<Todo>()("Todo", {
-  id: Schema.Number.pipe(Schema.int()),
+class Todo extends Schema.Class<Todo>("Todo")({
+  id: Schema.Int,
   title: Schema.String,
   completed: Schema.Boolean,
 }) {}
@@ -41,111 +36,90 @@ class GetTodoError extends Schema.TaggedError<GetTodoError>()(
   {}
 ) {}
 
-class GetTodos extends Rpc.StreamRequest<GetTodos>()("GetTodos", {
-  failure: GetTodoError,
-  success: Todo,
-  payload: {},
-}) {}
+const TodosRpc = RpcGroup.make(
+  Rpc.make("GetTodos", {
+    success: Todo,
+    stream: true,
+  }),
+  Rpc.make("GetTodoById", {
+    success: Todo,
+    error: GetTodoError,
+    payload: { id: Schema.Number.pipe(Schema.check(Schema.isInt())) },
+  })
+);
 
-class GetTodoById extends Schema.TaggedRequest<GetTodoById>()("GetTodoById", {
-  failure: GetTodoError,
-  success: Todo,
-  payload: { id: Schema.Number.pipe(Schema.int()) },
-}) {}
+type TodosRpc = typeof TodosRpc;
 
 /**
- * # Defining a Router (e.g. `router.ts`)
+ * # Implementing the handlers (`handlers.ts`)
  *
- * First, we make a `RpcRouter` using our Schema.
+ * First, we implement each procedure with `group.toLayer`.
  */
-const router: RpcRouter.RpcRouter<GetTodos | GetTodoById, never> =
-  RpcRouter.make(
-    Rpc.stream(GetTodos, () =>
-      Stream.fromIterable(
-        [1, 2, 3].map((id) => new Todo({ id, title: "todo", completed: false }))
-      )
+const TodosHandlers = TodosRpc.toLayer({
+  GetTodos: () =>
+    Stream.fromIterable(
+      [1, 2, 3].map((id) => new Todo({ id, title: "todo", completed: false }))
     ),
-    Rpc.effect(GetTodoById, (getTodoById) =>
-      getTodoById.id === 1
-        ? Effect.succeed(
-            new Todo({ id: getTodoById.id, title: "todo", completed: false })
-          )
-        : Effect.fail(new GetTodoError({}))
-    )
-  );
-
-type Router = typeof router;
+  GetTodoById: ({ id }: { readonly id: number }) =>
+    id === 1
+      ? Effect.succeed(new Todo({ id, title: "todo", completed: false }))
+      : Effect.fail(new GetTodoError()),
+});
 
 /**
  * # Serving the API (e.g. `server.ts`)
  *
  * Next well create our server;
- * You can implement the server in any way you want, but here we'll use the http router.
+ * `RpcServer.layerHttp` registers an `/rpc` route on the current HttpRouter.
  */
-export const HttpLive: Layer.Layer<never, HttpServerError.ServeError, never> =
-  HttpRouter.empty.pipe(
-    HttpRouter.post("/rpc", HttpRpcRouter.toHttpApp(router)),
-    HttpServer.serve(HttpMiddleware.logger),
-    HttpServer.withLogAddress,
-    Layer.provide(NodeHttpServer.layer(createServer, { port: 3000 }))
-  );
+export const RpcServerLive = RpcServer.layerHttp({
+  group: TodosRpc,
+  path: "/rpc",
+  protocol: "http",
+}).pipe(
+  Layer.provide(RpcSerialization.layerJson),
+  Layer.provide(TodosHandlers)
+);
 
-NodeRuntime.runMain(Layer.launch(HttpLive));
+const Routes = HttpRouter.use(Effect.fn(function* (_router: any) {}));
+
+const HttpServerLive = HttpRouter.serve(Routes).pipe(
+  Layer.provide(NodeHttpServer.layer(createServer, { port: 3000 }))
+);
+
+export const ServerLive = Layer.merge(HttpServerLive, RpcServerLive);
+
+// NodeRuntime.runMain(Layer.launch(ServerLive));
 
 /**
  * # On the client side (e.g. `client.ts`)
  *
- * And finally we can create a client, again this can be done in any way you want,
- * but here we'll use the http client.
+ * And finally we can create a typed client from the same group definition,
+ * pointing it at the server with an HTTP protocol.
  */
-const makeClient: Effect.Effect<
-  <Req extends GetTodoById | GetTodos>(
-    request: Req
-  ) => Rpc.Rpc.Result<Req, never>,
-  never,
-  HttpClient.HttpClient
-> = Effect.gen(function* () {
-  const baseClient = yield* HttpClient.HttpClient;
-  const client = baseClient.pipe(
-    HttpClient.filterStatusOk,
-    HttpClient.mapRequest(
-      HttpClientRequest.prependUrl("http://localhost:3000/rpc")
-    )
-  );
-  return RpcResolver.toClient(HttpRpcResolver.make<Router>(client));
-});
+const ClientLive = RpcClient.layerProtocolHttp({
+  url: "http://localhost:3000/rpc",
+}).pipe(Layer.provide(RpcSerialization.layerJson));
 
-export const program: Effect.Effect<
-  Todo[],
-  GetTodoError,
-  HttpClient.HttpClient
-> = Effect.gen(function* () {
-  const client: <Req extends GetTodoById | GetTodos>(
-    request: Req
-  ) => Rpc.Rpc.Result<Req, never> = yield* makeClient;
+export const program: Effect.Effect<void, unknown, Scope.Scope> = Effect.gen(
+  function* () {
+    const client = yield* RpcClient.make(TodosRpc).pipe(
+      Effect.provide(ClientLive)
+    );
 
-  yield* Effect.log("Running the client");
+    yield* Effect.log("Running the client");
 
-  const stream: Stream.Stream<Todo, GetTodoError, never> = client(
-    new GetTodos()
-  );
+    const todos: Stream.Stream<Todo, unknown> = client.GetTodos();
 
-  return yield* stream.pipe(
-    Stream.tap((todo) => Effect.log(todo)),
+    yield* Effect.log(yield* Stream.runCollect(todos));
 
-    Stream.runCollect,
+    const todo = yield* client.GetTodoById({ id: 1 });
 
-    Effect.flatMap(
-      Effect.forEach((todo) => client(new GetTodoById({ id: todo.id })), {
-        batching: true,
-      })
-    ),
-
-    Effect.tap(Console.log)
-  );
-});
+    yield* Console.log(todo);
+  }
+).pipe(Effect.provide(FetchHttpClient.layer));
 
 /**
  * and now we can use the client with our rpc requests
  */
-program.pipe(Effect.provide(FetchHttpClient.layer), Effect.runFork);
+Effect.scoped(program).pipe(Effect.runFork);

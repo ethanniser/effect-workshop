@@ -1,5 +1,4 @@
-import { Schema, type Types } from "effect";
-import { ParseError } from "effect/ParseResult";
+import { Schema, SchemaIssue, type Types } from "effect";
 
 import * as T from "../../testDriver.ts";
 
@@ -63,34 +62,36 @@ type AllTests = AllTrue<[TestA, TestB, TestC, TestD, TestE]>;
 
 const URLSchema = Schema.declare((input): input is URL => input instanceof URL);
 
-const URLFromString: Schema.Schema<URL, string> = Schema.Any;
+const URLFromString: Schema.Codec<URL, string> = Schema.Any;
 
 /**
  * Now write a schema that filters out URLs that are not https
  */
-const IsHttps: Schema.Schema<URL, URL> = Schema.Any;
+const IsHttps: Schema.Codec<URL, URL> = Schema.Any;
 
 /**
  * Now using those, create a schema that can decode a string and asserts that it is a valid https URL
  */
-const HttpsURL: Schema.Schema<URL, string> = Schema.Any;
+const HttpsURL: Schema.Codec<URL, string> = Schema.Any;
 
 const goodInput = "https://example.com";
 const badInput = "http://example.com";
 const reallyBadInput = "not a url";
 
-const testOne = Schema.decode(HttpsURL)(goodInput);
-const testTwo = Schema.decode(HttpsURL)(badInput);
-const testThree = Schema.decode(HttpsURL)(reallyBadInput);
+const testOne = Schema.decodeEffect(HttpsURL)(goodInput);
+const testTwo = Schema.decodeEffect(HttpsURL)(badInput);
+const testThree = Schema.decodeEffect(HttpsURL)(reallyBadInput);
 
 await T.testRunAssert(1, testOne, {
   successIs: (url) => url instanceof URL,
 });
 
 await T.testRunAssert(2, testTwo, {
-  failureIs: (error) => error instanceof ParseError,
+  failureIs: (error) =>
+    error instanceof Error && SchemaIssue.isIssue(error.cause),
 });
 
 await T.testRunAssert(3, testThree, {
-  failureIs: (error) => error instanceof ParseError,
+  failureIs: (error) =>
+    error instanceof Error && SchemaIssue.isIssue(error.cause),
 });

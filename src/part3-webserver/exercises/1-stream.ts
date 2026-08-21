@@ -47,7 +47,7 @@ const testOne: Stream.Stream<string, FileStreamError> = Stream.empty;
 
 await T.testRunAssert(
   1,
-  Stream.runFold(testOne, "", (acc, chunk) => acc + chunk),
+  Stream.runFold(testOne, () => "", (acc, chunk) => acc + chunk),
   {
     success: "1 2 3\n4 5 6\n7 8 9\n",
   }

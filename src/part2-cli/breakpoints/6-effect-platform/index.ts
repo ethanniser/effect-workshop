@@ -1,30 +1,44 @@
-import {
-  FetchHttpClient,
-  FileSystem,
-  HttpClient,
-  HttpClientRequest,
-  type HttpClientResponse,
-} from "@effect/platform";
-import { BunContext, BunRuntime } from "@effect/platform-bun";
+import { BunServices, BunRuntime } from "@effect/platform-bun";
 import {
   Console,
   Effect,
+  FileSystem,
   Function,
   Layer,
   Match,
   Option,
   Schema as S,
+  SchemaTransformation,
   pipe,
 } from "effect";
+import {
+  FetchHttpClient,
+  HttpClient,
+  HttpClientRequest,
+  type HttpClientResponse,
+} from "effect/unstable/http";
+
 import * as M from "./model.ts";
 
 const StringPairsFromStrings = S.Array(S.String).pipe(
-  S.filter((arr) => arr.every((s) => s.split(": ").length === 2)),
-  S.transform(S.Array(S.Tuple(S.String, S.String)), {
-    decode: (arr) =>
-      arr.map((s) => s.split(": ") as unknown as readonly [string, string]),
-    encode: (arr) => arr.map((s) => s.join(": ")),
-  })
+  S.check(
+    S.makeFilter(
+      (arr: ReadonlyArray<string>) =>
+        arr.every((s) => s.split(": ").length === 2),
+      { message: 'expected "key: value" pairs' }
+    )
+  ),
+  S.decodeTo(
+    S.Array(S.Tuple([S.String, S.String])),
+    SchemaTransformation.transform<
+      ReadonlyArray<readonly [string, string]>,
+      ReadonlyArray<string>
+    >({
+      decode: (arr) =>
+        arr.map((s) => s.split(": ") as unknown as readonly [string, string]),
+      encode: (arr) => arr.map((s) => s.join(": ")),
+    })
+  )
 );
 
 const main = Effect.gen(function* () {
@@ -34,24 +48,26 @@ const main = Effect.gen(function* () {
 
   const body = Option.getOrUndefined(options.data);
 
+  const maybeReqBuilder = Match.value(options.method).pipe(
+    Match.when("GET", () => HttpClientRequest.get),
+    Match.when("POST", () => HttpClientRequest.post),
+    Match.when("PUT", () => HttpClientRequest.put),
+    Match.when("PATCH", () => HttpClientRequest.patch),
+    Match.when(
+      "DELETE",
+      () => (url: string | URL) => HttpClientRequest.make("DELETE")(url)
+    ),
+    Match.option
+  );
+
   const req: HttpClientRequest.HttpClientRequest = yield* pipe(
-    Match.value(options.method)
-      .pipe(
-        Match.when("GET", () => HttpClientRequest.get),
-        Match.when("POST", () => HttpClientRequest.post),
-        Match.when("PUT", () => HttpClientRequest.put),
-        Match.when("PATCH", () => HttpClientRequest.patch),
-        Match.when("DELETE", () => HttpClientRequest.del),
-        Match.option
+    Effect.fromOption(maybeReqBuilder),
+    Effect.map((reqBuilder) =>
+      reqBuilder(options.url).pipe(
+        HttpClientRequest.setHeaders(Object.fromEntries(options.headers)),
+        body ? HttpClientRequest.bodyText(body) : Function.identity
       )
-      .pipe(
-        Effect.map((reqBuilder) =>
-          reqBuilder(options.url).pipe(
-            HttpClientRequest.setHeaders(options.headers),
-            body ? HttpClientRequest.bodyText(body) : Function.identity
-          )
-        )
-      )
+    )
   );
 
   const res: HttpClientResponse.HttpClientResponse = yield* client.execute(req);
@@ -73,12 +89,10 @@ const main = Effect.gen(function* () {
   const finalString = buffer.join("\n");
 
   const fs = yield* FileSystem.FileSystem;
-  yield* pipe(
-    Effect.matchEffect(options.output, {
-      onSuccess: (output) => fs.writeFileString(output, finalString),
-      onFailure: () => Console.log(finalString),
-    })
-  );
+  yield* Option.match(options.output, {
+    onSome: (output) => fs.writeFileString(output, finalString),
+    onNone: () => Console.log(finalString),
+  });
 }).pipe(Effect.scoped);
 
 function getCliOption(
@@ -93,7 +107,7 @@ function getCliOption(
       (_) => (_ === -1 ? Option.none() : Option.some(_))
     );
     const nextIndex = index + 1;
-    const value = yield* Option.fromNullable(cliArgs[nextIndex]);
+    const value = yield* Option.fromNullishOr(cliArgs[nextIndex]);
     return value;
   });
 }
@@ -131,7 +145,7 @@ const CliOptionsLive = Layer.effect(
 
     const headers = yield* pipe(
       getCliOptionMultiple(args, { name: "headers", alias: "H" }),
-      S.decode(StringPairsFromStrings),
+      S.decodeEffect(StringPairsFromStrings),
       Effect.mapError(() => new M.HeaderParseError())
     );
 
@@ -143,12 +157,11 @@ const CliOptionsLive = Layer.effect(
       Option.map((_) => _ === "true")
     );
 
-    const url = yield* pipe(
-      Option.fromNullable("https://jsonplaceholder.typicode.com/posts/1"),
-      Effect.mapError(
-        () => new M.CliOptionsParseError({ error: "No url provided" })
-      )
-    );
+    const url = yield* Option.match(Option.some("https://jsonplaceholder.typicode.com/posts/1"), {
+      onSome: (url) => Effect.succeed(url),
+      onNone: () =>
+        Effect.fail(new M.CliOptionsParseError({ error: "No url provided" })),
+    });
 
     return {
       url,
@@ -165,6 +178,6 @@ pipe(
   main,
   Effect.provide(CliOptionsLive),
   Effect.provide(FetchHttpClient.layer),
-  Effect.provide(BunContext.layer),
+  Effect.provide(BunServices.layer),
   BunRuntime.runMain
 );

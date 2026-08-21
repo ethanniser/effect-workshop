@@ -2,6 +2,7 @@ import { Effect, Layer, Schema as S, pipe } from "effect";
 
 import * as M from "./model.ts";
 import { CurrentConnections, WSSServer } from "./shared.ts";
+import type { WebSocket as WsWebSocket } from "ws";
 
 export const Live = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -15,7 +16,7 @@ export const Live = Layer.effectDiscard(
       currentConnections.forEach((conn) => conn._rawWS.send(messageString));
     }
 
-    wss.on("connection", (ws: WebSocket) => {
+    wss.on("connection", (ws: WsWebSocket) => {
       let connectionName: string;
 
       ws.on("message", (data) => {
@@ -25,7 +26,7 @@ export const Live = Layer.effectDiscard(
           const parsedMessage = pipe(
             message,
             S.decodeUnknownSync(
-              S.Union(M.ServerIncomingMessage, M.StartupMessage)
+              S.Union([M.ServerIncomingMessage, M.StartupMessage])
             )
           );
 
